@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>RIDDIM POS</title>
+  <link rel="stylesheet" href="css/terminal.css">
+</head>
+<body>
+
+<!-- ════════════════════════════════════════
+     LOGIN SCREEN
+     ════════════════════════════════════════ -->
+<div id="screen-login" class="screen active">
+  <div class="login-brand">RIDDIM</div>
+  <div class="login-sub">SUPPER CLUB</div>
+
+  <div class="pin-display">
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+  </div>
+
+  <div class="pin-pad">
+    <button class="pin-btn" onclick="pinPress('1')">1</button>
+    <button class="pin-btn" onclick="pinPress('2')">2</button>
+    <button class="pin-btn" onclick="pinPress('3')">3</button>
+    <button class="pin-btn" onclick="pinPress('4')">4</button>
+    <button class="pin-btn" onclick="pinPress('5')">5</button>
+    <button class="pin-btn" onclick="pinPress('6')">6</button>
+    <button class="pin-btn" onclick="pinPress('7')">7</button>
+    <button class="pin-btn" onclick="pinPress('8')">8</button>
+    <button class="pin-btn" onclick="pinPress('9')">9</button>
+    <button class="pin-btn pin-clear" onclick="pinClear()">CLEAR</button>
+    <button class="pin-btn" onclick="pinPress('0')">0</button>
+    <button class="pin-btn pin-enter" onclick="attemptLogin()">ENTER</button>
+  </div>
+
+  <div id="loginError" class="login-error"></div>
+  <div id="loginStation" class="login-station"></div>
+</div>
+
+<!-- ════════════════════════════════════════
+     MAIN TERMINAL SCREEN
+     ════════════════════════════════════════ -->
+<div id="screen-main" class="screen">
+
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="top-bar-brand">RIDDIM POS</div>
+    <div id="topBarStation" class="top-bar-station">Bar 1</div>
+    <div id="topBarUser" class="top-bar-user"></div>
+    <div id="topBarClock" class="top-bar-clock"></div>
+    <button class="top-bar-btn danger" onclick="logout()">LOCK</button>
+  </div>
+
+  <!-- Main Body: Left (tabs + menu) | Right (cart) -->
+  <div class="main-body">
+
+    <!-- Left Panel -->
+    <div class="left-panel">
+
+      <!-- Tab Strip -->
+      <div id="tabStrip" class="tab-strip"></div>
+
+      <!-- Category Bar -->
+      <div id="categoryBar" class="category-bar"></div>
+
+      <!-- Menu Grid -->
+      <div id="menuGrid" class="menu-grid"></div>
+
+    </div>
+
+    <!-- Right Panel: Cart -->
+    <div class="cart-panel">
+      <div class="cart-header">
+        <div>
+          <div id="cartTabName" class="cart-tab-name">NO TAB</div>
+          <div id="cartTabType" class="cart-tab-type"></div>
+        </div>
+      </div>
+
+      <div id="cartItems" class="cart-items">
+        <div class="cart-empty">Tap + to open a tab</div>
+      </div>
+
+      <div class="cart-footer">
+        <div id="cartTotals" class="cart-totals"></div>
+        <div class="cart-actions">
+          <button id="btnFire" class="cart-btn fire" onclick="fireOrder()" disabled>FIRE</button>
+          <button id="btnPay" class="cart-btn pay" onclick="openPayment()" disabled>PAY</button>
+          <button id="btnHold" class="cart-btn hold" onclick="" disabled>HOLD</button>
+          <button id="btnVoid" class="cart-btn void" onclick="" disabled>VOID</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     PAYMENT MODAL
+     ════════════════════════════════════════ -->
+<div id="paymentModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">PAYMENT</div>
+      <button class="modal-close" onclick="closeModal('paymentModal')">X</button>
+    </div>
+    <div class="modal-body">
+      <div class="pay-amount">
+        <div class="pay-amount-label">TOTAL DUE</div>
+        <div id="payAmountValue" class="pay-amount-value">$0.00</div>
+      </div>
+
+      <div class="pay-methods">
+        <button class="pay-method-btn card selected" data-method="card" onclick="selectPayMethod('card')">CARD</button>
+        <button class="pay-method-btn cash" data-method="cash" onclick="selectPayMethod('cash')">CASH</button>
+        <button class="pay-method-btn comp" data-method="comp" onclick="selectPayMethod('comp')">COMP</button>
+        <button class="pay-method-btn split" data-method="split" onclick="selectPayMethod('split')">SPLIT</button>
+      </div>
+
+      <div class="pay-tip">
+        <div class="pay-tip-label">TIP</div>
+        <div class="pay-tip-options">
+          <button class="tip-btn selected" data-tip="0" onclick="selectTip(0)">No Tip</button>
+          <button class="tip-btn" data-tip="0.18" onclick="selectTip(0.18)">18%</button>
+          <button class="tip-btn" data-tip="0.20" onclick="selectTip(0.20)">20%</button>
+          <button class="tip-btn" data-tip="0.25" onclick="selectTip(0.25)">25%</button>
+        </div>
+      </div>
+
+      <button class="pay-submit" onclick="submitPayment()">CLOSE TAB</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     NEW TAB MODAL
+     ════════════════════════════════════════ -->
+<div id="newTabModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">NEW TAB</div>
+      <button class="modal-close" onclick="closeModal('newTabModal')">X</button>
+    </div>
+    <div class="modal-body">
+      <div class="new-tab-options">
+        <input id="newTabName" class="new-tab-input" type="text"
+               placeholder="Guest name (optional)"
+               onkeydown="if(event.key==='Enter') createNamedTab()">
+
+        <div class="new-tab-quick">
+          <button class="quick-tab-btn" onclick="createQuickTab('bar')">BAR TAB</button>
+          <button class="quick-tab-btn" onclick="createQuickTab('walkin')">WALK-IN</button>
+          <button class="quick-tab-btn" onclick="createQuickTab('member')">MEMBER</button>
+          <button class="quick-tab-btn" onclick="createQuickTab('table')">TABLE</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
