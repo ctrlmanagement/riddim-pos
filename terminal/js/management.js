@@ -980,15 +980,26 @@ function mgmtForceClockOut(staffId) {
   const staff = STAFF.find(s => s.id === staffId);
   if (!staff) return;
 
-  if (typeof clockEntries !== 'undefined') {
-    clockEntries.push({
-      staffId: staff.id,
-      staffName: staff.name,
-      type: 'out',
-      time: new Date(),
-    });
+  // Check for open tabs
+  const openTabs = tabs.filter(t =>
+    (t.status === 'open' || t.status === 'sent') && t.createdBy === staff.id
+  );
+  if (openTabs.length > 0) {
+    showToast(staff.name + ' has ' + openTabs.length + ' open tab(s) — close first');
+    return;
   }
 
+  // Show checkout report then clock out
+  if (typeof pendingClockOutStaff !== 'undefined' && typeof showStaffCheckout === 'function') {
+    pendingClockOutStaff = staff;
+    showStaffCheckout(staff);
+    return;
+  }
+
+  // Fallback — direct clock out
+  if (typeof clockEntries !== 'undefined') {
+    clockEntries.push({ staffId: staff.id, staffName: staff.name, type: 'out', time: new Date() });
+  }
   renderMgmtClock();
   showToast(staff.name + ' clocked out');
 }

@@ -1404,6 +1404,72 @@ body {
 .receipt-close-btn:active { transform: scale(0.97); }
 
 /* ════════════════════════════════════════
+   STAFF CHECKOUT REPORT
+   ════════════════════════════════════════ */
+.checkout-report {
+  padding: 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--ivory);
+}
+
+.co-header { text-align: center; margin-bottom: 8px; }
+.co-brand {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--gold);
+  letter-spacing: 2px;
+}
+.co-title {
+  font-family: var(--font-label);
+  font-size: 18px;
+  color: var(--ivory);
+  letter-spacing: 2px;
+}
+.co-meta { font-size: 12px; color: var(--ash); margin-top: 2px; }
+
+.co-divider {
+  border-top: 1px solid var(--surface);
+  margin: 10px 0;
+}
+
+.co-section-title {
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--gold);
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+
+.co-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 13px;
+  color: var(--ivory-dim);
+}
+
+.co-row span { flex: 1; }
+.co-row span:first-child { flex: 2; }
+.co-row.head {
+  font-family: var(--font-label);
+  font-size: 11px;
+  color: var(--ash);
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--surface);
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+}
+
+.co-row.total {
+  font-weight: 700;
+  color: var(--ivory);
+  font-size: 14px;
+}
+
+/* ════════════════════════════════════════
    SEAT SELECTOR BAR
    ════════════════════════════════════════ */
 .seat-bar {

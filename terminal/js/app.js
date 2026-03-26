@@ -417,18 +417,70 @@ function removeLine(lineId) {
 
   if (line.status === 'pending') {
     tab.lines = tab.lines.filter(l => l.id !== lineId);
+    renderCart();
+    renderTabs();
   } else {
-    // Already sent — needs void
-    if (CONFIG.require_manager_void && currentUser.role !== 'manager') {
+    // Already sent — needs void with reason
+    if (CONFIG.require_manager_void && currentUser.role !== 'manager' && currentUser.role !== 'owner') {
       showToast('Manager PIN required to void sent items');
       return;
     }
+    openVoidReasonModal('line', lineId);
+  }
+}
+
+function openVoidReasonModal(type, id) {
+  document.getElementById('voidReasonType').value = type;
+  document.getElementById('voidReasonTargetId').value = id;
+  document.getElementById('voidReasonSelect').value = '';
+  document.getElementById('voidReasonNote').value = '';
+  openModal('voidReasonModal');
+}
+
+function submitVoidReason() {
+  const type = document.getElementById('voidReasonType').value;
+  const id = document.getElementById('voidReasonTargetId').value;
+  const reason = document.getElementById('voidReasonSelect').value;
+  const note = document.getElementById('voidReasonNote').value.trim();
+
+  if (!reason) { showToast('Select a void reason'); return; }
+
+  const fullReason = note ? reason + ' — ' + note : reason;
+
+  if (type === 'line') {
+    const tab = getActiveTab();
+    if (!tab) return;
+    const line = tab.lines.find(l => l.id === id);
+    if (!line) return;
     line.voided = true;
     line.status = 'voided';
+    line.voidReason = fullReason;
+    line.voidedBy = currentUser.id;
+    line.voidedAt = new Date();
+    closeModal('voidReasonModal');
+    renderCart();
+    renderTabs();
+    showToast(line.name + ' voided');
+  } else if (type === 'tab') {
+    const tab = tabs.find(t => t.id === id);
+    if (!tab) return;
+    tab.status = 'voided';
+    tab.voidedAt = new Date();
+    tab.voidedBy = currentUser.id;
+    tab.voidReason = fullReason;
+    tab.lines.forEach(l => {
+      l.voided = true;
+      l.status = 'voided';
+      l.voidReason = fullReason;
+    });
+    activeTabId = null;
+    const openTabs = tabs.filter(t => t.status === 'open' || t.status === 'sent');
+    if (openTabs.length > 0) activeTabId = openTabs[0].id;
+    closeModal('voidReasonModal');
+    renderTabs();
+    renderCart();
+    showToast(tab.name + ' voided — ' + reason);
   }
-
-  renderCart();
-  renderTabs();
 }
 
 function tabSubtotal(tab) {
@@ -793,27 +845,12 @@ function voidTab() {
   const tab = getActiveTab();
   if (!tab) return;
 
-  if (CONFIG.require_manager_void && currentUser.role !== 'manager') {
+  if (CONFIG.require_manager_void && currentUser.role !== 'manager' && currentUser.role !== 'owner') {
     showToast('Manager PIN required to void tab');
     return;
   }
 
-  tab.status = 'voided';
-  tab.voidedAt = new Date();
-  tab.voidedBy = currentUser.id;
-  tab.lines.forEach(l => {
-    l.voided = true;
-    l.status = 'voided';
-  });
-
-  activeTabId = null;
-  const openTabs = tabs.filter(t => t.status === 'open' || t.status === 'sent');
-  if (openTabs.length > 0) {
-    activeTabId = openTabs[0].id;
-  }
-
-  renderTabs();
-  renderCart();
+  openVoidReasonModal('tab', tab.id);
 }
 
 // ═══════════════════════════════════════════

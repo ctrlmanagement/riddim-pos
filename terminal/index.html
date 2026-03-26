@@ -519,6 +519,34 @@
 </div>
 
 <!-- ════════════════════════════════════════
+     VOID REASON MODAL
+     ════════════════════════════════════════ -->
+<div id="voidReasonModal" class="modal-overlay">
+  <div class="modal" style="width:420px">
+    <div class="modal-header">
+      <div class="modal-title">VOID REASON</div>
+      <button class="modal-close" onclick="closeModal('voidReasonModal')">X</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="voidReasonType">
+      <input type="hidden" id="voidReasonTargetId">
+      <select id="voidReasonSelect" class="form-input" style="width:100%;margin-bottom:12px">
+        <option value="">-- Select Reason --</option>
+        <option value="Wrong Item">Wrong Item</option>
+        <option value="Customer Refused">Customer Refused</option>
+        <option value="Spill / Dropped">Spill / Dropped</option>
+        <option value="Quality Issue">Quality Issue</option>
+        <option value="Duplicate Order">Duplicate Order</option>
+        <option value="Manager Override">Manager Override</option>
+        <option value="Other">Other</option>
+      </select>
+      <input type="text" id="voidReasonNote" class="form-input" style="width:100%;margin-bottom:16px" placeholder="Note (optional)">
+      <button class="pay-submit" style="background:var(--red)" onclick="submitVoidReason()">VOID</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
      RECEIPT PREVIEW MODAL
      ════════════════════════════════════════ -->
 <div id="receiptModal" class="modal-overlay">
@@ -531,6 +559,24 @@
       <div id="receiptBody" class="receipt"></div>
       <div class="receipt-actions">
         <button class="receipt-close-btn" onclick="closeReceipt()">CLOSE</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     STAFF CHECKOUT REPORT MODAL
+     ════════════════════════════════════════ -->
+<div id="checkoutModal" class="modal-overlay">
+  <div class="modal" style="width:600px;max-height:90vh">
+    <div class="modal-header">
+      <div class="modal-title">DAILY CHECKOUT</div>
+      <button class="modal-close" onclick="closeModal('checkoutModal')">X</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div id="checkoutReport" class="checkout-report"></div>
+      <div class="receipt-actions">
+        <button class="receipt-close-btn" style="background:var(--green)" onclick="confirmCheckoutAndClockOut()">CONFIRM &amp; CLOCK OUT</button>
       </div>
     </div>
   </div>

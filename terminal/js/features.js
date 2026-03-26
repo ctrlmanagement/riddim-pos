@@ -132,7 +132,7 @@ function ecComp() {
     <div class="ec-form">
       <div class="ec-subtitle">SELECT ITEM TO COMP</div>
       ${compableLines.map(l => `
-        <div class="ec-line-row" onclick="ecDoComp('${l.id}')">
+        <div class="ec-line-row" onclick="ecSelectCompItem('${l.id}')">
           <span>${l.qty}x ${l.name}</span>
           <span>$${(l.price * l.qty).toFixed(2)}</span>
         </div>
@@ -140,20 +140,55 @@ function ecComp() {
     </div>`;
 }
 
-function ecDoComp(lineId) {
+let pendingCompLineId = null;
+
+function ecSelectCompItem(lineId) {
+  pendingCompLineId = lineId;
   const tab = getActiveTab();
-  if (!tab) return;
-  const line = tab.lines.find(l => l.id === lineId);
+  const line = tab ? tab.lines.find(l => l.id === lineId) : null;
+  const name = line ? line.name : '';
+
+  document.getElementById('ecPanel').innerHTML = `
+    <div class="ec-form">
+      <div class="ec-subtitle">COMP REASON — ${name}</div>
+      <select id="compReasonSelect" class="form-input" style="margin-bottom:8px">
+        <option value="">-- Select Reason --</option>
+        <option value="VIP / Owner Guest">VIP / Owner Guest</option>
+        <option value="Manager Discretion">Manager Discretion</option>
+        <option value="Quality Issue">Quality Issue</option>
+        <option value="Wrong Item Made">Wrong Item Made</option>
+        <option value="Promo / Event">Promo / Event</option>
+        <option value="Staff Meal">Staff Meal</option>
+        <option value="Other">Other</option>
+      </select>
+      <input type="text" id="compReasonNote" class="form-input" placeholder="Note (optional)">
+      <div class="form-actions" style="margin-top:8px">
+        <button class="mgmt-action-btn" onclick="ecComp()" style="background:var(--surface);color:var(--ivory-dim);border-color:var(--surface-active)">BACK</button>
+        <button class="mgmt-action-btn" onclick="ecDoComp()">COMP</button>
+      </div>
+    </div>`;
+}
+
+function ecDoComp() {
+  const tab = getActiveTab();
+  if (!tab || !pendingCompLineId) return;
+  const line = tab.lines.find(l => l.id === pendingCompLineId);
   if (!line) return;
+
+  const reason = document.getElementById('compReasonSelect').value;
+  if (!reason) { showToast('Select a comp reason'); return; }
+  const note = document.getElementById('compReasonNote').value.trim();
 
   line.comped = true;
   line.compedBy = currentUser.id;
   line.compedAt = new Date();
+  line.compReason = note ? reason + ' — ' + note : reason;
 
+  pendingCompLineId = null;
   closeModal('editCheckModal');
   renderCart();
   renderTabs();
-  showToast(line.name + ' comped');
+  showToast(line.name + ' comped — ' + reason);
 }
 
 // Discount
@@ -323,6 +358,8 @@ function updateClockPinDots() {
   });
 }
 
+let pendingClockOutStaff = null; // staff waiting for checkout before clock out
+
 function clockPinSubmit() {
   const staff = STAFF.find(s => s.pin === clockPinBuffer);
   if (!staff) {
@@ -343,54 +380,183 @@ function clockPinSubmit() {
   const now = new Date();
   const type = isClockedIn ? 'out' : 'in';
 
-  // Record entry
-  const entry = {
-    staffId: staff.id,
-    staffName: staff.name,
-    type: type,
-    time: now,
-  };
-  clockEntries.push(entry);
-
-  // Show result
-  const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-
-  if (type === 'in') {
-    document.getElementById('clockResult').innerHTML = `
-      <div class="clock-result-card in">
-        <div class="clock-result-name">${staff.name}</div>
-        <div class="clock-result-action">CLOCKED IN</div>
-        <div class="clock-result-time">${timeStr}</div>
-      </div>`;
-  } else {
-    // Calculate shift duration
-    const clockInEntry = [...clockEntries].reverse().find(e => e.staffId === staff.id && e.type === 'in' && e.time < now);
-    let duration = '';
-    if (clockInEntry) {
-      const diffMin = Math.floor((now - clockInEntry.time) / 60000);
-      const h = Math.floor(diffMin / 60);
-      const m = diffMin % 60;
-      duration = h > 0 ? h + 'h ' + m + 'm' : m + 'm';
+  if (type === 'out') {
+    // Check for open tabs — block clock out if any
+    const openTabs = tabs.filter(t =>
+      (t.status === 'open' || t.status === 'sent') && t.createdBy === staff.id
+    );
+    if (openTabs.length > 0) {
+      document.getElementById('clockStatus').textContent = '';
+      document.getElementById('clockResult').innerHTML = `
+        <div class="clock-result-card out" style="border-color:var(--orange);background:rgba(243,156,18,0.1)">
+          <div class="clock-result-name">${staff.name}</div>
+          <div class="clock-result-action" style="color:var(--orange)">OPEN TABS (${openTabs.length})</div>
+          <div class="clock-result-time" style="color:var(--red)">Close all tabs before clocking out</div>
+        </div>`;
+      clockPinBuffer = '';
+      updateClockPinDots();
+      return;
     }
-    document.getElementById('clockResult').innerHTML = `
-      <div class="clock-result-card out">
-        <div class="clock-result-name">${staff.name}</div>
-        <div class="clock-result-action">CLOCKED OUT</div>
-        <div class="clock-result-time">${timeStr}</div>
-        ${duration ? '<div class="clock-result-duration">Shift: ' + duration + '</div>' : ''}
-      </div>`;
+
+    // Must pull checkout report before clocking out
+    pendingClockOutStaff = staff;
+    closeModal('clockModal');
+    showStaffCheckout(staff);
+    return;
   }
+
+  // Clock IN — record immediately
+  clockEntries.push({ staffId: staff.id, staffName: staff.name, type: 'in', time: now });
+
+  const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  document.getElementById('clockResult').innerHTML = `
+    <div class="clock-result-card in">
+      <div class="clock-result-name">${staff.name}</div>
+      <div class="clock-result-action">CLOCKED IN</div>
+      <div class="clock-result-time">${timeStr}</div>
+    </div>`;
 
   document.getElementById('clockStatus').textContent = '';
   clockPinBuffer = '';
   updateClockPinDots();
 
-  // Auto-close after 3 seconds
   setTimeout(() => {
     if (document.getElementById('clockModal').classList.contains('active')) {
       closeModal('clockModal');
     }
   }, 3000);
+}
+
+// ═══════════════════════════════════════════
+// STAFF CHECKOUT REPORT
+// ═══════════════════════════════════════════
+
+function showStaffCheckout(staff) {
+  const el = document.getElementById('checkoutReport');
+  if (!el) return;
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+
+  // Get this staff member's closed tabs for today
+  const staffTabs = tabs.filter(t =>
+    t.createdBy === staff.id && (t.status === 'closed' || t.status === 'paid')
+  );
+
+  // Payment summary
+  let cashSales = 0, cashTips = 0, cardSales = 0, cardTips = 0, compTotal = 0;
+  let voidCount = 0, compCount = 0, discountTotal = 0;
+  const catSales = {};
+  const itemSales = {};
+
+  staffTabs.forEach(t => {
+    const sub = tabSubtotal(t);
+    const disc = tabDiscountAmount(t);
+    const net = sub - disc;
+    const tax = tabTax(t);
+    const total = net + tax;
+    const tip = t.tipAmount || 0;
+
+    if (t.payMethod === 'cash') { cashSales += total; cashTips += tip; }
+    else if (t.payMethod === 'card') { cardSales += total; cardTips += tip; }
+    else if (t.payMethod === 'comp') { compTotal += total; }
+
+    discountTotal += disc;
+
+    // Item + category breakdown
+    t.lines.forEach(l => {
+      if (l.voided) { voidCount++; return; }
+      if (l.comped) { compCount++; }
+
+      // Category
+      const item = MENU_ITEMS.find(m => m.id === l.menuItemId);
+      const catId = item ? item.cat : 'unknown';
+      const catObj = MENU_CATEGORIES.find(c => c.id === catId);
+      const catName = catObj ? catObj.name : 'OTHER';
+      if (!catSales[catName]) catSales[catName] = 0;
+      if (!l.comped) catSales[catName] += l.price * l.qty;
+
+      // Items
+      if (!itemSales[l.name]) itemSales[l.name] = { qty: 0, sales: 0 };
+      itemSales[l.name].qty += l.qty;
+      if (!l.comped) itemSales[l.name].sales += l.price * l.qty;
+    });
+  });
+
+  const totalSales = cashSales + cardSales;
+  const totalTips = cashTips + cardTips;
+  const srvCharge = totalSales * CONFIG.tax_rate;
+
+  // Clock hours
+  const clockIn = clockEntries.find(e => e.staffId === staff.id && e.type === 'in');
+  const clockInStr = clockIn ? new Date(clockIn.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
+  let shiftMin = 0;
+  if (clockIn) shiftMin = Math.floor((now - new Date(clockIn.time)) / 60000);
+  const shiftStr = shiftMin > 0 ? Math.floor(shiftMin / 60) + 'h ' + (shiftMin % 60) + 'm' : '—';
+
+  let html = `
+    <div class="co-header">
+      <div class="co-brand">RIDDIM SUPPER CLUB</div>
+      <div class="co-title">Daily Checkout</div>
+      <div class="co-meta">${staff.name} — ${STATION.label}</div>
+      <div class="co-meta">${dateStr} at ${timeStr}</div>
+      <div class="co-meta">Clock In: ${clockInStr} — Shift: ${shiftStr}</div>
+    </div>
+    <div class="co-divider"></div>
+
+    <div class="co-section-title">NET SALES SUMMARY</div>
+    <div class="co-row"><span>Sales</span><span>$${totalSales.toFixed(2)}</span></div>
+    <div class="co-row"><span>- Voids</span><span>${voidCount} items</span></div>
+    <div class="co-row"><span>- Comps</span><span>${compCount} items</span></div>
+    <div class="co-row"><span>- Discounts</span><span>$${discountTotal.toFixed(2)}</span></div>
+    <div class="co-divider"></div>
+
+    <div class="co-section-title">PAYMENT SUMMARY</div>
+    <div class="co-row head"><span>Method</span><span>Sales</span><span>Tips</span><span>Total</span></div>
+    <div class="co-row"><span>Card</span><span>$${cardSales.toFixed(2)}</span><span>$${cardTips.toFixed(2)}</span><span>$${(cardSales + cardTips).toFixed(2)}</span></div>
+    <div class="co-row"><span>Cash</span><span>$${cashSales.toFixed(2)}</span><span>$${cashTips.toFixed(2)}</span><span>$${(cashSales + cashTips).toFixed(2)}</span></div>
+    ${compTotal > 0 ? `<div class="co-row"><span>Comp</span><span>$${compTotal.toFixed(2)}</span><span>—</span><span>$${compTotal.toFixed(2)}</span></div>` : ''}
+    <div class="co-row total"><span>Total</span><span>$${totalSales.toFixed(2)}</span><span>$${totalTips.toFixed(2)}</span><span>$${(totalSales + totalTips).toFixed(2)}</span></div>
+    <div class="co-divider"></div>
+
+    <div class="co-section-title">CATEGORY SALES</div>`;
+
+  const cats = Object.entries(catSales).sort((a, b) => b[1] - a[1]);
+  cats.forEach(([name, sales]) => {
+    html += `<div class="co-row"><span>${name}</span><span>$${sales.toFixed(2)}</span></div>`;
+  });
+
+  html += `<div class="co-divider"></div>
+    <div class="co-section-title">ITEM SUMMARY</div>
+    <div class="co-row head"><span>Item</span><span>Qty</span><span>Sales</span></div>`;
+
+  const items = Object.entries(itemSales).sort((a, b) => b[1].sales - a[1].sales);
+  items.forEach(([name, d]) => {
+    html += `<div class="co-row"><span>${name}</span><span>${d.qty}</span><span>$${d.sales.toFixed(2)}</span></div>`;
+  });
+
+  html += `<div class="co-divider"></div>
+    <div class="co-row total"><span>Tabs Closed</span><span>${staffTabs.length}</span></div>
+    <div class="co-row total"><span>Cash Due</span><span>$${cashSales.toFixed(2)}</span></div>
+    <div class="co-row total"><span>Net CC Tips</span><span>$${cardTips.toFixed(2)}</span></div>`;
+
+  el.innerHTML = html;
+  openModal('checkoutModal');
+}
+
+function confirmCheckoutAndClockOut() {
+  if (!pendingClockOutStaff) { closeModal('checkoutModal'); return; }
+
+  const staff = pendingClockOutStaff;
+  const now = new Date();
+
+  clockEntries.push({ staffId: staff.id, staffName: staff.name, type: 'out', time: now });
+  staff.checkedOut = true;
+
+  closeModal('checkoutModal');
+  showToast(staff.name + ' clocked out');
+  pendingClockOutStaff = null;
 }
 
 
