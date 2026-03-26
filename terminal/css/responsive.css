@@ -1,0 +1,12 @@
+/* ════════════════════════════════════════
+   RESPONSIVE — tablet portrait fallback
+   ════════════════════════════════════════ */
+@media (max-width: 800px) {
+  .cart-panel { width: 260px; min-width: 260px; }
+  .menu-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  .menu-item { height: 72px; }
+  .menu-item-name { font-size: 12px; }
+  .tables-sidebar { width: 220px; min-width: 220px; }
+  .tables-stats { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .tables-stat-val { font-size: 22px; }
+}

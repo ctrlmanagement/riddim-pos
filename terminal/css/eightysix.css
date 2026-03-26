@@ -1,0 +1,86 @@
+/* ════════════════════════════════════════
+   86 LIST
+   ════════════════════════════════════════ */
+.top-bar-btn.eightysix {
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--red);
+  border-color: var(--surface);
+}
+
+.top-bar-btn.eightysix:hover { border-color: var(--red); }
+
+.eightysix-search { margin-bottom: 12px; }
+
+.eightysix-list {
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.eightysix-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--obsidian-mid);
+  border: 1px solid var(--surface);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.eightysix-row:hover { border-color: var(--gold-dim); }
+
+.eightysix-row.is86 {
+  border-color: var(--red-dim);
+  background: rgba(231, 76, 60, 0.08);
+}
+
+.eightysix-item { display: flex; flex-direction: column; gap: 2px; }
+
+.eightysix-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ivory);
+}
+
+.eightysix-row.is86 .eightysix-name {
+  text-decoration: line-through;
+  color: var(--red);
+}
+
+.eightysix-cat {
+  font-size: 11px;
+  color: var(--ash);
+}
+
+.eightysix-toggle {
+  font-family: var(--font-label);
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: var(--green);
+  min-width: 30px;
+  text-align: center;
+}
+
+.eightysix-row.is86 .eightysix-toggle {
+  color: var(--red);
+  font-weight: 700;
+}
+
+/* 86'd menu items */
+.menu-item.eighty-sixed {
+  opacity: 0.35;
+  border-color: var(--red-dim);
+  cursor: not-allowed;
+}
+
+.menu-item.eighty-sixed .menu-item-price {
+  color: var(--red);
+  font-family: var(--font-label);
+  font-size: 14px;
+}

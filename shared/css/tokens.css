@@ -1,0 +1,56 @@
+/* RIDDIM POS — Design Tokens & Base Reset
+   Shared across terminal, KDS, and management UIs */
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=Cormorant+Garamond:wght@600&display=swap');
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+/* ── Tokens ── */
+:root {
+  --obsidian: #0A0A0A;
+  --obsidian-light: #141414;
+  --obsidian-mid: #1A1A1A;
+  --surface: #222222;
+  --surface-hover: #2A2A2A;
+  --surface-active: #333333;
+  --gold: #D4A843;
+  --gold-dim: #A8863A;
+  --gold-bright: #E8C466;
+  --ivory: #F5F0E8;
+  --ivory-dim: #BDB8B0;
+  --ash: #888888;
+  --red: #E74C3C;
+  --red-dim: #C0392B;
+  --green: #27AE60;
+  --green-dim: #1E8449;
+  --blue: #3498DB;
+  --orange: #F39C12;
+
+  --font-label: 'Bebas Neue', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-display: 'Cormorant Garamond', serif;
+
+  --radius: 6px;
+  --radius-lg: 10px;
+  --transition: 150ms ease;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--obsidian);
+  color: var(--ivory);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+/* ── Screens ── */
+.screen { display: none; height: 100vh; width: 100vw; }
+.screen.active { display: flex; }
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface-active); border-radius: 2px; }

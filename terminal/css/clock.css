@@ -1,0 +1,67 @@
+/* ════════════════════════════════════════
+   CLOCK IN / OUT
+   ════════════════════════════════════════ */
+.clock-pin-display {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.clock-status {
+  text-align: center;
+  font-size: 14px;
+  color: var(--ash);
+  margin-top: 16px;
+  min-height: 20px;
+}
+
+.clock-result {
+  margin-top: 12px;
+}
+
+.clock-result-card {
+  text-align: center;
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--surface);
+}
+
+.clock-result-card.in {
+  background: rgba(39, 174, 96, 0.1);
+  border-color: var(--green);
+}
+
+.clock-result-card.out {
+  background: rgba(231, 76, 60, 0.1);
+  border-color: var(--red);
+}
+
+.clock-result-name {
+  font-family: var(--font-label);
+  font-size: 22px;
+  color: var(--ivory);
+  letter-spacing: 1px;
+}
+
+.clock-result-action {
+  font-family: var(--font-label);
+  font-size: 16px;
+  letter-spacing: 2px;
+  margin-top: 4px;
+}
+
+.clock-result-card.in .clock-result-action { color: var(--green); }
+.clock-result-card.out .clock-result-action { color: var(--red); }
+
+.clock-result-time {
+  font-size: 14px;
+  color: var(--ivory-dim);
+  margin-top: 8px;
+}
+
+.clock-result-duration {
+  font-size: 13px;
+  color: var(--ash);
+  margin-top: 4px;
+}

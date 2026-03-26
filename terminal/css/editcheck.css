@@ -1,0 +1,100 @@
+/* ════════════════════════════════════════
+   EDIT CHECK
+   ════════════════════════════════════════ */
+.ec-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.ec-btn {
+  height: 52px;
+  border-radius: var(--radius);
+  border: 1px solid var(--surface-active);
+  background: var(--surface);
+  color: var(--ivory);
+  font-family: var(--font-label);
+  font-size: 14px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.ec-btn:hover { border-color: var(--gold-dim); }
+.ec-btn:active { transform: scale(0.97); }
+
+.ec-panel { min-height: 40px; }
+
+.ec-form { display: flex; flex-direction: column; gap: 12px; }
+
+.ec-subtitle {
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--ash);
+  letter-spacing: 2px;
+}
+
+.ec-line-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: var(--obsidian-mid);
+  border: 1px solid var(--surface);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--ivory);
+  transition: all var(--transition);
+}
+
+.ec-line-row:hover { border-color: var(--gold-dim); }
+
+.ec-discount-btns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.ec-disc-btn {
+  height: 48px;
+  border-radius: var(--radius);
+  border: 1px solid var(--surface-active);
+  background: var(--surface);
+  color: var(--ivory);
+  font-family: var(--font-label);
+  font-size: 16px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.ec-disc-btn:hover { border-color: var(--gold-dim); }
+.ec-disc-btn.selected { background: var(--gold-dim); color: var(--obsidian); border-color: var(--gold); }
+
+.ec-current {
+  font-size: 13px;
+  color: var(--ivory-dim);
+  padding: 8px 0;
+}
+
+.ec-remove-btn {
+  background: none;
+  border: none;
+  color: var(--red);
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.ec-remove-btn:hover { text-decoration: underline; }
+
+.ec-empty {
+  text-align: center;
+  color: var(--ash);
+  padding: 16px;
+  font-size: 14px;
+}

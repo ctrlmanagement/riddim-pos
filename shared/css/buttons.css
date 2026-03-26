@@ -1,0 +1,12 @@
+/* RIDDIM POS — Shared Button Helpers */
+
+.sent-badge {
+  font-size: 9px;
+  background: var(--green-dim);
+  color: white;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 6px;
+}
+
+.text-red { color: var(--red); }

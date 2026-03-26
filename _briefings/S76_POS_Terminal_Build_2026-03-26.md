@@ -111,13 +111,30 @@ terminal/
 
 ---
 
-## What's Next (suggested)
+## Architecture Decision: No Framework
 
-1. **Local server** (Phase 2 per CLAUDE.md) — Node.js + Express + Socket.IO + local PostgreSQL. Order engine, multi-terminal sync, offline persistence
-2. **KDS** (Phase 4) — Kitchen/bar display system, item routing by category
-3. **Stripe Terminal integration** (Phase 3) — card reader on Sunmi T3, PaymentIntent flow
-4. **Supabase sync** (Phase 5) — local PG ↔ Supabase bidirectional for orders, P&L
-5. **Integration** (Phase 6) — inventory deductions, daily_payouts P&L write, membership points
+Evaluated whether Astro (or React/Vue) would benefit the terminal UI given 10-15 views, multiple device platforms, and multiple POS terminals on one server. **Decision: stay vanilla HTML/CSS/JS.**
+
+**Reasons:**
+- Local-first mandate — no build step, no CDN, no internet dependency
+- Single-page app with view switching, not URL-routed pages — Astro's file-based routing adds nothing
+- All views share in-memory state (tabs, cart, user, clock) — framework islands would fight this
+- 5,853 lines is manageable with domain-split JS files (already in place)
+- Multi-terminal sync is Socket.IO's job (server layer), not a UI framework concern
+- Multi-device (terminal, KDS, bar display) = separate HTML entry points per device, same CSS
+
+**What to do instead:** reorganize file structure — split HTML into partials, formalize the JS module pattern, prepare for multi-device entry points.
+
+---
+
+## What's Next
+
+1. **File organization refactor** — split monolithic HTML into partials/components, formalize JS module boundaries, prepare multi-device entry points (terminal, kds, display)
+2. **Local server** (Phase 2) — Node.js + Express + Socket.IO + local PostgreSQL. Order engine, multi-terminal sync, offline persistence
+3. **KDS** (Phase 4) — Kitchen/bar display system, item routing by category
+4. **Stripe Terminal integration** (Phase 3) — card reader on Sunmi T3, PaymentIntent flow
+5. **Supabase sync** (Phase 5) — local PG ↔ Supabase bidirectional for orders, P&L
+6. **Integration** (Phase 6) — inventory deductions, daily_payouts P&L write, membership points
 
 ---
 
