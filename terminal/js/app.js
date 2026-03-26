@@ -1,120 +1,135 @@
 /* RIDDIM POS Terminal — Core Application
-   Phase 1: Staff-facing bartender terminal
-   Mock data — no server connection yet */
+   Phase 2: Supabase-connected — live menu, staff, config
+   S75: Replaced hardcoded data with database queries */
 
 'use strict';
 
 // ═══════════════════════════════════════════
-// CONFIGURATION
+// SUPABASE CLIENT
 // ═══════════════════════════════════════════
 
-const STATION = {
-  id: 'BAR1',
-  label: 'Bar 1',
-  pos: 'POS 1'
+const SUPABASE_URL = 'https://cbvryfgrqzdvbqigyrgh.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_fQlHFhC7tPkZNRl1djnvcA_68LpKQpv';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ═══════════════════════════════════════════
+// CONFIGURATION — loaded from Supabase
+// ═══════════════════════════════════════════
+
+let CONFIG = {
+  tax_rate: 0.089,
+  default_tip_pct: 0.20,
+  require_manager_void: true,
+  require_manager_comp: true,
+  require_manager_discount: true,
+  max_discount_pct: 0.50,
 };
 
-const TAX_RATE = 0.089; // Atlanta 8.9% sales tax
+let STATION = { id: null, code: 'BAR1', label: 'Bar 1', pos: 'POS 1' };
+let STAFF = [];
+let MENU_CATEGORIES = [];
+let MENU_ITEMS = [];
+let STATIONS = [];
 
 // ═══════════════════════════════════════════
-// MOCK DATA — replaced by server in Phase 2
+// DATA LOADING
 // ═══════════════════════════════════════════
 
-const STAFF = [
-  { id: 's1', name: 'Marcus', pin: '1234', role: 'bartender' },
-  { id: 's2', name: 'Aaliyah', pin: '5678', role: 'bartender' },
-  { id: 's3', name: 'Devon', pin: '0000', role: 'manager' },
-];
+async function loadConfig() {
+  const { data, error } = await sb.from('pos_config').select('*').limit(1).single();
+  if (data) {
+    CONFIG.tax_rate = parseFloat(data.tax_rate) || 0.089;
+    CONFIG.default_tip_pct = parseFloat(data.default_tip_pct) || 0.20;
+    CONFIG.require_manager_void = data.require_manager_void;
+    CONFIG.require_manager_comp = data.require_manager_comp;
+    CONFIG.require_manager_discount = data.require_manager_discount;
+    CONFIG.max_discount_pct = parseFloat(data.max_discount_pct) || 0.50;
+  }
+  if (error) console.error('Config load error:', error);
+}
 
-const MENU_CATEGORIES = [
-  { id: 'rail',      name: 'SPEED RAIL', color: '#D4A843' },
-  { id: 'spirits',   name: 'SPIRITS' },
-  { id: 'cocktails', name: 'COCKTAILS' },
-  { id: 'beer',      name: 'BEER' },
-  { id: 'wine',      name: 'WINE' },
-  { id: 'hookah',    name: 'HOOKAH' },
-  { id: 'food',      name: 'FOOD' },
-  { id: 'na',        name: 'N/A' },
-];
+async function loadStaff() {
+  const { data, error } = await sb
+    .from('staff')
+    .select('id, first_name, last_name, phone, role, pos_pin, pos_role, active')
+    .eq('active', true)
+    .not('pos_pin', 'is', null);
+  if (data) {
+    STAFF = data.map(s => ({
+      id: s.id,
+      name: s.first_name + (s.last_name ? ' ' + s.last_name.charAt(0) + '.' : ''),
+      fullName: s.first_name + ' ' + (s.last_name || ''),
+      pin: s.pos_pin,
+      role: s.pos_role || 'bartender',
+    }));
+  }
+  if (error) console.error('Staff load error:', error);
+}
 
-const MENU_ITEMS = [
-  // Speed Rail
-  { id: 'm01', name: 'Well Vodka',      price: 10, cat: 'rail', speedRail: true },
-  { id: 'm02', name: 'Well Rum',        price: 10, cat: 'rail', speedRail: true },
-  { id: 'm03', name: 'Well Tequila',    price: 10, cat: 'rail', speedRail: true },
-  { id: 'm04', name: 'Well Whiskey',    price: 10, cat: 'rail', speedRail: true },
-  { id: 'm05', name: 'Well Gin',        price: 10, cat: 'rail', speedRail: true },
-  { id: 'm06', name: 'House Margarita', price: 14, cat: 'rail', speedRail: true },
-  { id: 'm07', name: 'Rum Punch',       price: 14, cat: 'rail', speedRail: true },
-  { id: 'm08', name: 'Long Island',     price: 15, cat: 'rail', speedRail: true },
+async function loadCategories() {
+  const { data, error } = await sb
+    .from('pos_menu_categories')
+    .select('id, name, sort_order, color')
+    .eq('active', true)
+    .order('sort_order');
+  if (data) {
+    MENU_CATEGORIES = data.map(c => ({
+      id: c.id,
+      name: c.name,
+      color: c.color,
+    }));
+  }
+  if (error) console.error('Categories load error:', error);
+}
 
-  // Spirits
-  { id: 'm10', name: 'Hennessy VS',       price: 14, cat: 'spirits' },
-  { id: 'm11', name: 'Hennessy VSOP',     price: 18, cat: 'spirits' },
-  { id: 'm12', name: 'D\'usse',           price: 16, cat: 'spirits' },
-  { id: 'm13', name: 'Casamigos Blanco',  price: 16, cat: 'spirits' },
-  { id: 'm14', name: 'Casamigos Repo',    price: 18, cat: 'spirits' },
-  { id: 'm15', name: 'Casamigos Anejo',   price: 20, cat: 'spirits' },
-  { id: 'm16', name: 'Don Julio Blanco',  price: 16, cat: 'spirits' },
-  { id: 'm17', name: 'Don Julio 1942',    price: 35, cat: 'spirits' },
-  { id: 'm18', name: 'Patron Silver',     price: 16, cat: 'spirits' },
-  { id: 'm19', name: 'Grey Goose',        price: 16, cat: 'spirits' },
-  { id: 'm20', name: 'Belvedere',         price: 16, cat: 'spirits' },
-  { id: 'm21', name: 'Ciroc',             price: 15, cat: 'spirits' },
-  { id: 'm22', name: 'Jack Daniels',      price: 12, cat: 'spirits' },
-  { id: 'm23', name: 'Crown Royal',       price: 13, cat: 'spirits' },
-  { id: 'm24', name: 'Johnnie Black',     price: 14, cat: 'spirits' },
-  { id: 'm25', name: 'Remy VSOP',         price: 18, cat: 'spirits' },
+async function loadMenuItems() {
+  const { data, error } = await sb
+    .from('pos_menu_items')
+    .select('id, name, price, category_id, speed_rail, sort_order, inv_product_id')
+    .eq('active', true)
+    .order('sort_order');
+  if (data) {
+    MENU_ITEMS = data.map(i => ({
+      id: i.id,
+      name: i.name,
+      price: parseFloat(i.price),
+      cat: i.category_id,
+      speedRail: i.speed_rail,
+      invProductId: i.inv_product_id,
+    }));
+  }
+  if (error) console.error('Menu items load error:', error);
+}
 
-  // Cocktails
-  { id: 'm30', name: 'Riddim Punch',        price: 16, cat: 'cocktails' },
-  { id: 'm31', name: 'Smoky Old Fashioned', price: 18, cat: 'cocktails' },
-  { id: 'm32', name: 'Espresso Martini',    price: 17, cat: 'cocktails' },
-  { id: 'm33', name: 'Hennessy Sour',       price: 16, cat: 'cocktails' },
-  { id: 'm34', name: 'Passion Fruit Marg',  price: 16, cat: 'cocktails' },
-  { id: 'm35', name: 'Spicy Margarita',     price: 16, cat: 'cocktails' },
-  { id: 'm36', name: 'Dark & Stormy',       price: 15, cat: 'cocktails' },
-  { id: 'm37', name: 'Mojito',              price: 14, cat: 'cocktails' },
+async function loadStations() {
+  const { data, error } = await sb
+    .from('pos_stations')
+    .select('id, code, label, pos_name')
+    .eq('active', true)
+    .order('code');
+  if (data) {
+    STATIONS = data;
+    // Default to first station if none selected
+    if (STATIONS.length > 0 && !STATION.id) {
+      setStation(STATIONS[0]);
+    }
+  }
+  if (error) console.error('Stations load error:', error);
+}
 
-  // Beer
-  { id: 'm40', name: 'Heineken',     price: 7,  cat: 'beer' },
-  { id: 'm41', name: 'Corona',       price: 7,  cat: 'beer' },
-  { id: 'm42', name: 'Stella',       price: 8,  cat: 'beer' },
-  { id: 'm43', name: 'Blue Moon',    price: 8,  cat: 'beer' },
-  { id: 'm44', name: 'Guinness',     price: 8,  cat: 'beer' },
-  { id: 'm45', name: 'Bud Light',    price: 6,  cat: 'beer' },
-  { id: 'm46', name: 'Modelo',       price: 7,  cat: 'beer' },
+function setStation(s) {
+  STATION = { id: s.id, code: s.code, label: s.label, pos: s.pos_name || '' };
+}
 
-  // Wine
-  { id: 'm50', name: 'House Red',      price: 12, cat: 'wine' },
-  { id: 'm51', name: 'House White',    price: 12, cat: 'wine' },
-  { id: 'm52', name: 'Prosecco Glass', price: 14, cat: 'wine' },
-  { id: 'm53', name: 'Rose Glass',     price: 13, cat: 'wine' },
-  { id: 'm54', name: 'Moet Bottle',    price: 120, cat: 'wine' },
-  { id: 'm55', name: 'Veuve Bottle',   price: 180, cat: 'wine' },
-  { id: 'm56', name: 'Ace of Spades',  price: 350, cat: 'wine' },
-
-  // Hookah
-  { id: 'm60', name: 'Hookah Single',  price: 25, cat: 'hookah' },
-  { id: 'm61', name: 'Hookah Double',  price: 40, cat: 'hookah' },
-  { id: 'm62', name: 'Extra Bowl',     price: 15, cat: 'hookah' },
-
-  // Food
-  { id: 'm70', name: 'Jerk Wings',       price: 16, cat: 'food' },
-  { id: 'm71', name: 'Oxtail Sliders',   price: 18, cat: 'food' },
-  { id: 'm72', name: 'Fried Plantains',  price: 10, cat: 'food' },
-  { id: 'm73', name: 'Curry Shrimp',     price: 22, cat: 'food' },
-  { id: 'm74', name: 'Loaded Fries',     price: 14, cat: 'food' },
-  { id: 'm75', name: 'Fish Tacos',       price: 16, cat: 'food' },
-
-  // Non-Alcoholic
-  { id: 'm80', name: 'Red Bull',     price: 6, cat: 'na' },
-  { id: 'm81', name: 'Water',        price: 3, cat: 'na' },
-  { id: 'm82', name: 'Cranberry',    price: 4, cat: 'na' },
-  { id: 'm83', name: 'Pineapple',    price: 4, cat: 'na' },
-  { id: 'm84', name: 'Ginger Beer',  price: 5, cat: 'na' },
-  { id: 'm85', name: 'Soda',         price: 3, cat: 'na' },
-];
+async function loadAllData() {
+  await Promise.all([
+    loadConfig(),
+    loadStaff(),
+    loadCategories(),
+    loadMenuItems(),
+    loadStations(),
+  ]);
+}
 
 // ═══════════════════════════════════════════
 // STATE
@@ -123,7 +138,7 @@ const MENU_ITEMS = [
 let currentUser = null;
 let tabs = [];
 let activeTabId = null;
-let activeCategory = 'rail';
+let activeCategory = null; // set after categories load
 let nextTabNum = 1;
 
 // ═══════════════════════════════════════════
@@ -145,7 +160,28 @@ function initLogin() {
   pinBuffer = '';
   updatePinDots();
   document.getElementById('loginError').textContent = '';
-  document.getElementById('loginStation').textContent = STATION.label + ' — ' + STATION.pos;
+  document.getElementById('loginStation').textContent = STATION.label + (STATION.pos ? ' — ' + STATION.pos : '');
+
+  // Show station selector if multiple stations
+  renderStationSelector();
+}
+
+function renderStationSelector() {
+  const el = document.getElementById('stationSelector');
+  if (!el || STATIONS.length <= 1) return;
+  el.innerHTML = STATIONS.map(s =>
+    `<button class="station-btn ${s.code === STATION.code ? 'active' : ''}"
+            onclick="pickStation('${s.code}')">${s.label}</button>`
+  ).join('');
+}
+
+function pickStation(code) {
+  const s = STATIONS.find(st => st.code === code);
+  if (s) {
+    setStation(s);
+    document.getElementById('loginStation').textContent = STATION.label + (STATION.pos ? ' — ' + STATION.pos : '');
+    renderStationSelector();
+  }
 }
 
 function pinPress(digit) {
@@ -177,7 +213,9 @@ function attemptLogin() {
     document.getElementById('loginError').textContent = '';
     enterTerminal();
   } else {
-    document.getElementById('loginError').textContent = 'Invalid PIN';
+    document.getElementById('loginError').textContent = STAFF.length === 0
+      ? 'No staff configured — add POS PINs in Owner portal'
+      : 'Invalid PIN';
     pinBuffer = '';
     updatePinDots();
   }
@@ -191,6 +229,12 @@ function enterTerminal() {
   showScreen('main');
   document.getElementById('topBarUser').textContent = currentUser.name;
   document.getElementById('topBarStation').textContent = STATION.label;
+
+  // Set first category as active
+  if (MENU_CATEGORIES.length > 0 && !activeCategory) {
+    activeCategory = MENU_CATEGORIES[0].id;
+  }
+
   renderCategories();
   renderMenu();
   renderTabs();
@@ -264,14 +308,14 @@ function createTab(name, type = 'bar') {
     id: 'tab-' + Date.now(),
     num: num,
     name: name || 'Tab ' + num,
-    type: type, // bar, table, member
+    type: type,
     memberId: null,
     tableId: null,
     lines: [],
-    status: 'open', // open, sent, paid, closed, voided
+    status: 'open',
     createdAt: new Date(),
     createdBy: currentUser.id,
-    station: STATION.id,
+    station: STATION.code,
   };
   tabs.push(tab);
   activeTabId = tab.id;
@@ -312,7 +356,6 @@ function renderTabs() {
 function addToCart(menuItemId) {
   let tab = getActiveTab();
   if (!tab) {
-    // Auto-create tab if none active
     tab = createTab();
   }
 
@@ -333,9 +376,10 @@ function addToCart(menuItemId) {
       name: item.name,
       price: item.price,
       qty: 1,
-      status: 'pending', // pending, sent, preparing, ready, served, voided, comped
+      status: 'pending',
       voided: false,
       comped: false,
+      invProductId: item.invProductId || null,
       addedAt: new Date(),
       addedBy: currentUser.id,
     });
@@ -352,10 +396,13 @@ function removeLine(lineId) {
   if (!line) return;
 
   if (line.status === 'pending') {
-    // Not yet sent — just remove
     tab.lines = tab.lines.filter(l => l.id !== lineId);
   } else {
-    // Already sent — needs void (manager auth in future)
+    // Already sent — needs void
+    if (CONFIG.require_manager_void && currentUser.role !== 'manager') {
+      showToast('Manager PIN required to void sent items');
+      return;
+    }
     line.voided = true;
     line.status = 'voided';
   }
@@ -371,7 +418,7 @@ function tabSubtotal(tab) {
 }
 
 function tabTax(tab) {
-  return tabSubtotal(tab) * TAX_RATE;
+  return tabSubtotal(tab) * CONFIG.tax_rate;
 }
 
 function tabTotal(tab) {
@@ -429,10 +476,11 @@ function renderCart() {
   const sub = tabSubtotal(tab);
   const tax = tabTax(tab);
   const total = tabTotal(tab);
+  const taxPct = (CONFIG.tax_rate * 100).toFixed(1);
 
   totalsEl.innerHTML = `
     <div class="cart-total-row"><span>Subtotal</span><span>$${sub.toFixed(2)}</span></div>
-    <div class="cart-total-row"><span>Tax (8.9%)</span><span>$${tax.toFixed(2)}</span></div>
+    <div class="cart-total-row"><span>Tax (${taxPct}%)</span><span>$${tax.toFixed(2)}</span></div>
     <div class="cart-total-row grand"><span>TOTAL</span><span>$${total.toFixed(2)}</span></div>
   `;
 
@@ -488,7 +536,7 @@ function openPayment() {
   const total = tabTotal(tab);
   document.getElementById('payAmountValue').textContent = '$' + total.toFixed(2);
   selectedPayMethod = 'card';
-  selectedTip = 0.20; // Bar tabs default to 20%
+  selectedTip = CONFIG.default_tip_pct;
   updatePayMethodButtons();
   updateTipButtons();
   openModal('paymentModal');
@@ -565,7 +613,6 @@ function holdTab() {
   const tab = getActiveTab();
   if (!tab) return;
 
-  // Hold = park the tab, deselect it
   activeTabId = null;
   const openTabs = tabs.filter(t => (t.status === 'open' || t.status === 'sent') && t.id !== tab.id);
   if (openTabs.length > 0) {
@@ -580,9 +627,9 @@ function voidTab() {
   const tab = getActiveTab();
   if (!tab) return;
 
-  // Manager auth check (Phase 2: manager PIN prompt)
-  if (currentUser.role !== 'manager') {
-    // For now, allow all staff — Phase 2 will gate behind manager PIN
+  if (CONFIG.require_manager_void && currentUser.role !== 'manager') {
+    showToast('Manager PIN required to void tab');
+    return;
   }
 
   tab.status = 'voided';
@@ -593,7 +640,6 @@ function voidTab() {
     l.status = 'voided';
   });
 
-  // Move to next open tab
   activeTabId = null;
   const openTabs = tabs.filter(t => t.status === 'open' || t.status === 'sent');
   if (openTabs.length > 0) {
@@ -602,6 +648,23 @@ function voidTab() {
 
   renderTabs();
   renderCart();
+}
+
+// ═══════════════════════════════════════════
+// TOAST NOTIFICATIONS
+// ═══════════════════════════════════════════
+
+function showToast(msg) {
+  let toast = document.getElementById('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#D4A843;color:#0A0A0A;padding:12px 24px;border-radius:8px;font-family:"Bebas Neue",sans-serif;font-size:16px;letter-spacing:1px;z-index:9999;opacity:0;transition:opacity 0.3s;';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  setTimeout(() => { toast.style.opacity = '0'; }, 2500);
 }
 
 // ═══════════════════════════════════════════
@@ -625,10 +688,10 @@ function createQuickTab(type) {
   } else if (type === 'walkin') {
     createTab('Walk-in ' + nextTabNum, 'bar');
   } else if (type === 'member') {
-    // TODO: member lookup
+    // TODO: member lookup from Supabase
     createTab('Member', 'member');
   } else if (type === 'table') {
-    // TODO: table selection
+    // TODO: table selection from Supabase
     createTab('Table', 'table');
   }
 }
@@ -679,10 +742,22 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ═══════════════════════════════════════════
-// INIT
+// INIT — Load from Supabase, then show login
 // ═══════════════════════════════════════════
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Show loading state
+  document.getElementById('loginError').textContent = 'Loading...';
+
+  try {
+    await loadAllData();
+    console.log(`POS loaded: ${STAFF.length} staff, ${MENU_CATEGORIES.length} categories, ${MENU_ITEMS.length} items, ${STATIONS.length} stations`);
+  } catch (err) {
+    console.error('Failed to load POS data:', err);
+    document.getElementById('loginError').textContent = 'Connection error — check network';
+    return;
+  }
+
   showScreen('login');
   initLogin();
 });
