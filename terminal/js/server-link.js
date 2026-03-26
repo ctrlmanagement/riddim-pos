@@ -7,17 +7,38 @@
 // and syncs across multiple terminals in real time
 // ═══════════════════════════════════════════
 
-const SERVER_URL = window.location.origin; // same origin when served by local server
+const POS_SERVER_CANDIDATES = [
+  window.location.origin,     // same origin when served by local server
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+];
+let SERVER_URL = null;
 let socket = null;
 let serverConnected = false;
 
 // ── INIT ────────────────────────────────────────────────────
-function initServerLink() {
+async function initServerLink() {
   if (typeof io === 'undefined') {
     console.warn('Socket.IO client not loaded — running without server link');
+    updateConnectionBadge(false);
     return;
   }
 
+  // Detect which server URL responds
+  for (const url of POS_SERVER_CANDIDATES) {
+    try {
+      const res = await fetch(url + '/api/health', { signal: AbortSignal.timeout(1500) });
+      if (res.ok) { SERVER_URL = url; break; }
+    } catch(e) { /* try next */ }
+  }
+
+  if (!SERVER_URL) {
+    console.warn('No POS server found — running without server link');
+    updateConnectionBadge(false);
+    return;
+  }
+
+  console.log('POS server detected at:', SERVER_URL);
   socket = io(SERVER_URL);
 
   socket.on('connect', () => {
@@ -88,7 +109,7 @@ function updateConnectionBadge(connected) {
 
 // ── REST API HELPERS ────────────────────────────────────────
 async function serverPost(path, body) {
-  if (!serverConnected) return null;
+  if (!serverConnected || !SERVER_URL) return null;
   try {
     const res = await fetch(SERVER_URL + path, {
       method: 'POST',
@@ -107,7 +128,7 @@ async function serverPost(path, body) {
 }
 
 async function serverGet(path) {
-  if (!serverConnected) return null;
+  if (!serverConnected || !SERVER_URL) return null;
   try {
     const res = await fetch(SERVER_URL + path);
     if (!res.ok) return null;

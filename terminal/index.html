@@ -657,8 +657,13 @@
   </div>
 </div>
 
-<!-- Socket.IO client (served by local server) -->
-<script src="/socket.io/socket.io.js"></script>
+<!-- Socket.IO client — try local server first, fall back to CDN -->
+<script src="/socket.io/socket.io.js" onerror="
+  var s=document.createElement('script');
+  s.src='https://cdn.socket.io/4.8.1/socket.io.min.js';
+  s.onerror=function(){window.io=undefined;};
+  document.head.appendChild(s);
+"></script>
 
 <!-- Core (must load first) -->
 <script src="js/core.js"></script>
