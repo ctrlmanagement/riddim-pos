@@ -5,10 +5,10 @@
 // CART / ORDER LINES
 // ═══════════════════════════════════════════
 
-function addToCart(menuItemId) {
+async function addToCart(menuItemId) {
   let tab = getActiveTab();
   if (!tab) {
-    tab = createTab();
+    tab = await createTab();
   }
 
   const item = MENU_ITEMS.find(i => i.id === menuItemId);
@@ -25,7 +25,7 @@ function addToCart(menuItemId) {
   if (existing) {
     existing.qty += 1;
   } else {
-    tab.lines.push({
+    const newLine = {
       id: 'line-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
       menuItemId: item.id,
       name: item.name,
@@ -38,7 +38,11 @@ function addToCart(menuItemId) {
       invProductId: item.invProductId || null,
       addedAt: new Date(),
       addedBy: currentUser.id,
-    });
+    };
+    tab.lines.push(newLine);
+
+    // Persist to local server
+    if (typeof serverAddLines === 'function') serverAddLines(tab, [newLine]);
   }
 
   renderCart();
@@ -97,6 +101,9 @@ function submitVoidReason() {
     renderCart();
     renderTabs();
     showToast(line.name + ' voided');
+
+    // Persist to local server
+    if (typeof serverVoidLine === 'function') serverVoidLine(tab, line, fullReason);
   } else if (type === 'tab') {
     const tab = tabs.find(t => t.id === id);
     if (!tab) return;
@@ -116,6 +123,9 @@ function submitVoidReason() {
     renderTabs();
     renderCart();
     showToast(tab.name + ' voided — ' + reason);
+
+    // Persist to local server
+    if (typeof serverVoidOrder === 'function') serverVoidOrder(tab, fullReason);
   }
 }
 
@@ -292,6 +302,9 @@ function fireOrder() {
   renderCart();
   renderTabs();
 
+  // Persist to local server
+  if (typeof serverFireOrder === 'function') serverFireOrder(tab);
+
   // Visual feedback
   const btn = document.getElementById('btnFire');
   btn.textContent = 'SENT';
@@ -318,6 +331,9 @@ function holdTab() {
 
   renderTabs();
   renderCart();
+
+  // Persist to local server
+  if (typeof serverHoldOrder === 'function') serverHoldOrder(tab);
 }
 
 function voidTab() {

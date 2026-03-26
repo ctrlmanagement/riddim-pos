@@ -83,4 +83,10 @@ function submitPayment() {
   showReceipt(tab);
   renderTabs();
   renderCart();
+
+  // Persist to local server
+  if (typeof serverPayOrder === 'function') {
+    const total = tabTotal(tab);
+    serverPayOrder(tab, selectedPayMethod, total, tab.tipAmount || 0);
+  }
 }

@@ -90,6 +90,9 @@ function enterTerminal() {
   updateManagementAccess();
   applyPermissionUI();
 
+  // Connect to local server
+  if (typeof initServerLink === 'function') initServerLink();
+
   // Set first category as active
   if (MENU_CATEGORIES.length > 0 && !activeCategory) {
     activeCategory = MENU_CATEGORIES[0].id;

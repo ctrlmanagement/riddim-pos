@@ -121,6 +121,12 @@ function ecDoComp() {
   renderCart();
   renderTabs();
   showToast(line.name + ' comped — ' + reason);
+
+  // Persist to local server
+  if (typeof serverCompLine === 'function') {
+    const tab = getActiveTab();
+    if (tab) serverCompLine(tab, line, line.compReason);
+  }
 }
 
 // Discount

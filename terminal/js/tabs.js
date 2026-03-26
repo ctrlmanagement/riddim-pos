@@ -5,7 +5,7 @@
 // TAB MANAGEMENT
 // ═══════════════════════════════════════════
 
-function createTab(name, type = 'bar') {
+async function createTab(name, type = 'bar') {
   const num = nextTabNum++;
   const tab = {
     id: 'tab-' + Date.now(),
@@ -31,6 +31,10 @@ function createTab(name, type = 'bar') {
   renderTabs();
   renderCart();
   closeModal('newTabModal');
+
+  // Persist to local server — must await so serverId is set before lines are added
+  if (typeof serverCreateOrder === 'function') await serverCreateOrder(tab);
+
   return tab;
 }
 

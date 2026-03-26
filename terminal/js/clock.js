@@ -89,6 +89,9 @@ function clockPinSubmit() {
   // Clock IN — record immediately
   clockEntries.push({ staffId: staff.id, staffName: staff.name, type: 'in', time: now });
 
+  // Persist to local server
+  if (typeof serverClockIn === 'function') serverClockIn(staff.id, staff.name);
+
   const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   document.getElementById('clockResult').innerHTML = `
     <div class="clock-result-card in">
@@ -234,6 +237,9 @@ function confirmCheckoutAndClockOut() {
 
   clockEntries.push({ staffId: staff.id, staffName: staff.name, type: 'out', time: now });
   staff.checkedOut = true;
+
+  // Persist to local server
+  if (typeof serverClockOut === 'function') serverClockOut(staff.id);
 
   closeModal('checkoutModal');
   showToast(staff.name + ' clocked out');
