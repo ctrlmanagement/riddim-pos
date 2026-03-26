@@ -8,7 +8,13 @@
 async function addToCart(menuItemId) {
   let tab = getActiveTab();
   if (!tab) {
-    tab = await createTab();
+    // If a table is pending, materialize it now
+    if (typeof pendingTableNum !== 'undefined' && pendingTableNum) {
+      tab = await materializePendingTable();
+    }
+    if (!tab) {
+      tab = await createTab();
+    }
   }
 
   const item = MENU_ITEMS.find(i => i.id === menuItemId);
@@ -183,9 +189,12 @@ function renderCart() {
   const editBtn = document.getElementById('btnEditCheck');
 
   if (!tab) {
-    headerEl.textContent = 'NO TAB';
-    typeEl.textContent = '';
-    itemsEl.innerHTML = '<div class="cart-empty">Tap + to open a tab</div>';
+    const pending = typeof pendingTableNum !== 'undefined' && pendingTableNum;
+    headerEl.textContent = pending ? 'TABLE ' + pendingTableNum : 'NO TAB';
+    typeEl.textContent = pending ? 'TAP AN ITEM TO START' : '';
+    itemsEl.innerHTML = pending
+      ? '<div class="cart-empty">Add items from the menu to open this table</div>'
+      : '<div class="cart-empty">Tap + to open a tab</div>';
     totalsEl.innerHTML = '';
     fireBtn.disabled = true;
     payBtn.disabled = true;
@@ -284,7 +293,7 @@ function renderCart() {
   const hasPending = tab.lines.some(l => l.status === 'pending' && !l.voided);
   const hasLines = tab.lines.some(l => !l.voided);
   fireBtn.disabled = !hasPending;
-  payBtn.disabled = !hasLines;
+  payBtn.disabled = false; // Always allow PAY — supports $0 close, comps, voids, exact cash
   holdBtn.disabled = !hasLines;
   voidBtn.disabled = false;
 }

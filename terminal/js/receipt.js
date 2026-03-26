@@ -89,9 +89,10 @@ function showReceipt(tab) {
     html += `<div class="rcpt-row total"><span>TOTAL</span><span>$${total.toFixed(2)}</span></div>`;
   }
 
-  // Min spend note
+  // Min spend note — check subtotal + tax (no grat)
   if (tab.minSpendRequired && tab.minSpendRequired > 0) {
-    const met = sub >= tab.minSpendRequired;
+    const subWithTax = sub + tax;
+    const met = subWithTax >= tab.minSpendRequired;
     html += `<div class="rcpt-center rcpt-sm" style="margin-top:4px;color:${met ? '#27AE60' : '#E74C3C'}">Min Spend: $${tab.minSpendRequired.toFixed(0)} ${met ? '(MET)' : '(NOT MET)'}</div>`;
   }
 

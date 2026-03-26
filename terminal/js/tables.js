@@ -495,6 +495,9 @@ function getTimeAgo(date) {
 // TABLE CLICK — open/select tab for table
 // ═══════════════════════════════════════════
 
+// Pending table selection — tab created on first item, not on click
+let pendingTableNum = null;
+
 async function tableClick(tableNum) {
   // Check if there's already an open POS tab for this table
   const existing = tabs.find(t =>
@@ -502,8 +505,8 @@ async function tableClick(tableNum) {
   );
 
   if (existing) {
-    // Select the existing tab and switch to terminal
     activeTabId = existing.id;
+    pendingTableNum = null;
     renderTabs();
     renderCart();
     switchView('terminal');
@@ -524,19 +527,64 @@ async function tableClick(tableNum) {
     }
   }
 
-  // If there's a confirmed reservation, seat via reservation flow
+  // If there's a confirmed reservation, seat via reservation flow (creates tab immediately — has deposit)
   if (tableReservations[tableNum]) {
     await seatFromReservation(tableNum);
     return;
   }
 
-  // Walk-in seating — create a new tab linked to this table
+  // If there's a Supabase session with a booking, create tab immediately (has deposit)
+  if (tableSessions[tableNum] && tableSessions[tableNum].booking_id) {
+    await createTableTabFromSession(tableNum);
+    return;
+  }
+
+  // Walk-in — defer tab creation until first item is added
+  pendingTableNum = tableNum;
+  activeTabId = null;
+  renderTabs();
+  renderCart();
+  switchView('terminal');
+  showToast('Table ' + tableNum + ' selected — add items to open tab');
+}
+
+// Create a table tab from an existing Supabase session (has booking/deposit)
+async function createTableTabFromSession(tableNum) {
+  const session = tableSessions[tableNum];
+  const section = getSectionForTable(tableNum);
+  const tabName = session.guest_name ? 'T' + tableNum + ' — ' + session.guest_name : 'Table ' + tableNum;
+
+  const tab = await createTab(tabName, 'table');
+  tab.tableNum = tableNum;
+  tab.section = section;
+  tab.sessionId = session.id;
+  if (session.guest_name) tab.guestName = session.guest_name;
+  if (session.guest_phone) tab.guestPhone = session.guest_phone;
+  if (session.member_id) tab.memberId = session.member_id;
+  if (session.party_size) tab.guestCount = session.party_size;
+
+  if (session.booking_id) {
+    await applyBookingToTab(tab, session.booking_id);
+  }
+
+  pendingTableNum = null;
+  renderTabs();
+  renderCart();
+  updateFloorPlan();
+  switchView('terminal');
+}
+
+// Called by addToCart when pendingTableNum is set — creates the tab on first item
+async function materializePendingTable() {
+  if (!pendingTableNum) return null;
+
+  const tableNum = pendingTableNum;
   const section = getSectionForTable(tableNum);
   const tab = await createTab('Table ' + tableNum, 'table');
   tab.tableNum = tableNum;
   tab.section = section;
 
-  // If there's a Supabase session for this table (seated via staff portal), link it
+  // Link to existing session if staff portal seated them
   if (tableSessions[tableNum]) {
     const session = tableSessions[tableNum];
     tab.sessionId = session.id;
@@ -544,23 +592,14 @@ async function tableClick(tableNum) {
       tab.name = 'T' + tableNum + ' — ' + session.guest_name;
       tab.guestName = session.guest_name;
     }
-    if (session.guest_phone) tab.guestPhone = session.guest_phone;
-    if (session.member_id) tab.memberId = session.member_id;
-    if (session.party_size) tab.guestCount = session.party_size;
-
-    // Fetch booking deposit/min spend if session is linked to a booking
-    if (session.booking_id) {
-      await applyBookingToTab(tab, session.booking_id);
-    }
+    if (session.booking_id) await applyBookingToTab(tab, session.booking_id);
   } else {
-    // No existing session — create one in Supabase
     await createTableSession(tab);
   }
 
-  renderTabs();
-  renderCart();
+  pendingTableNum = null;
   updateFloorPlan();
-  switchView('terminal');
+  return tab;
 }
 
 // ═══════════════════════════════════════════

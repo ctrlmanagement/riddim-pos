@@ -62,8 +62,9 @@ function renderMinSpendBar(tab) {
   if (!min) return '';
 
   const spent = tabSubtotal(tab);
-  const pct = Math.min((spent / min.amount) * 100, 100);
-  const met = spent >= min.amount;
+  const spentWithTax = spent + (spent * CONFIG.tax_rate);
+  const pct = Math.min((spentWithTax / min.amount) * 100, 100);
+  const met = spentWithTax >= min.amount;
   const fillClass = met ? 'met' : pct >= 75 ? 'close' : 'under';
 
   return `

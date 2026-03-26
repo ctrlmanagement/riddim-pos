@@ -17,13 +17,14 @@ function openPayment() {
   const deposit = tab.depositAmount || 0;
   const total = tabTotal(tab);
 
-  // Min spend check — warn if under minimum
+  // Min spend check — subtotal + tax (no grat)
   const minSpend = getTabMinSpend(tab);
   const spent = typeof tabSubtotal === 'function' ? tabSubtotal(tab) : 0;
+  const spentWithTax = spent + (spent * CONFIG.tax_rate);
   const minWarning = document.getElementById('payMinSpendWarning');
   if (minWarning) {
-    if (minSpend > 0 && spent < minSpend) {
-      const shortfall = minSpend - spent;
+    if (minSpend > 0 && spentWithTax < minSpend) {
+      const shortfall = minSpend - spentWithTax;
       minWarning.innerHTML = `<div class="pay-min-warn">MINIMUM NOT MET — $${shortfall.toFixed(2)} short of $${minSpend.toFixed(0)} minimum</div>`;
       minWarning.style.display = '';
     } else {
