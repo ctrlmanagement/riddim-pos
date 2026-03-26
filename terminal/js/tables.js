@@ -1,6 +1,7 @@
 /* RIDDIM POS — Tables / Floor Plan Module
    31-table floor plan, table-to-tab linking, recall tabs
-   Pulls reservations from Supabase table_bookings + table_sessions */
+   Live integration: table_sessions ↔ POS tabs, reservations → seat flow
+   S79: Full RIDDIM integration layer */
 
 'use strict';
 
@@ -35,20 +36,19 @@ function getSectionForTable(num) {
 // FLOOR PLAN STATE
 // ═══════════════════════════════════════════
 
-let tableReservations = {}; // tableNum -> reservation data
+let tableReservations = {}; // tableNum -> booking data (with event info)
 let tableSessions = {};     // tableNum -> session data
+let tableRefreshTimer = null;
 
 // ═══════════════════════════════════════════
 // LOAD TABLE DATA FROM SUPABASE
 // ═══════════════════════════════════════════
 
 async function loadTableData() {
-  const today = new Date().toLocaleDateString('en-CA');
-
   // Load active table_sessions (seated guests)
   const { data: sessions } = await sb
     .from('table_sessions')
-    .select('table_number, guest_name, party_size, server_name, seated_at, status, booking_id')
+    .select('id, table_number, guest_name, guest_phone, party_size, server_id, server_name, seated_at, status, booking_id, member_id, deposit_applied, notes')
     .in('status', ['seated', 'active'])
     .order('seated_at');
 
@@ -59,21 +59,136 @@ async function loadTableData() {
     });
   }
 
-  // Load today's reservations (confirmed bookings not yet seated)
+  // Load tonight's reservations (confirmed bookings with assigned tables, not yet seated)
+  // Constraint #2: Never JOIN events on table_bookings — query separately
   const { data: bookings } = await sb
     .from('table_bookings')
-    .select('table_number, guest_name, party_size, status, notes')
+    .select('id, table_number, guest_name, guest_phone, party_size, status, notes, member_id, minimum_spend_required, deposit_amount, deposit_paid, event_id, section_name, booking_source')
     .eq('status', 'confirmed')
     .not('table_number', 'is', null);
 
   tableReservations = {};
-  if (bookings) {
+  if (bookings && bookings.length > 0) {
+    // Query events separately — constraint #2
+    const eventIds = [...new Set(bookings.map(b => b.event_id).filter(Boolean))];
+    let eventsMap = {};
+    if (eventIds.length > 0) {
+      const { data: events } = await sb
+        .from('events')
+        .select('id, title, event_date')
+        .in('id', eventIds);
+      if (events) events.forEach(e => { eventsMap[e.id] = e; });
+    }
+
     bookings.forEach(b => {
       if (b.table_number && !tableSessions[b.table_number]) {
+        b._event = eventsMap[b.event_id] || null;
         tableReservations[b.table_number] = b;
       }
     });
   }
+}
+
+// Auto-refresh floor plan every 30s when in tables view
+function startTableRefresh() {
+  stopTableRefresh();
+  tableRefreshTimer = setInterval(async () => {
+    await loadTableData();
+    updateFloorPlan();
+  }, 30000);
+}
+
+function stopTableRefresh() {
+  if (tableRefreshTimer) {
+    clearInterval(tableRefreshTimer);
+    tableRefreshTimer = null;
+  }
+}
+
+// ═══════════════════════════════════════════
+// TABLE SESSION LIFECYCLE — Supabase sync
+// ═══════════════════════════════════════════
+
+// Create a new table_session when a POS tab opens on a table
+async function createTableSession(tab) {
+  if (!tab.tableNum) return null;
+
+  const payload = {
+    table_number: tab.tableNum,
+    guest_name: tab.guestName || tab.name || 'Table ' + tab.tableNum,
+    guest_phone: tab.guestPhone || null,
+    party_size: tab.guestCount || 1,
+    server_id: currentUser.id,
+    server_name: currentUser.name,
+    status: 'seated',
+    member_id: tab.memberId || null,
+    booking_id: tab.bookingId || null,
+    deposit_applied: tab.depositAmount || 0,
+    notes: tab.bookingNotes || null,
+  };
+
+  const { data, error } = await sb
+    .from('table_sessions')
+    .insert(payload)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to create table_session:', error);
+    return null;
+  }
+
+  if (data) {
+    tab.sessionId = data.id;
+    tableSessions[tab.tableNum] = data;
+  }
+  return data;
+}
+
+// Close table_session when POS tab is paid/closed
+async function closeTableSession(tab) {
+  if (!tab.sessionId) return;
+
+  const total = typeof tabTotal === 'function' ? tabTotal(tab) : 0;
+  const { error } = await sb
+    .from('table_sessions')
+    .update({
+      status: 'closed',
+      closed_at: new Date().toISOString(),
+      payment_amount: total,
+    })
+    .eq('id', tab.sessionId);
+
+  if (error) {
+    console.error('Failed to close table_session:', error);
+    return;
+  }
+
+  // Clean up local state
+  if (tab.tableNum) delete tableSessions[tab.tableNum];
+}
+
+// Update booking status to 'seated' when seating from reservation
+async function seatReservation(bookingId) {
+  const { error } = await sb
+    .from('table_bookings')
+    .update({ status: 'seated' })
+    .eq('id', bookingId);
+
+  if (error) console.error('Failed to update booking status:', error);
+}
+
+// Close booking when tab is paid
+async function closeBooking(bookingId, paymentAmount) {
+  const { error } = await sb
+    .from('table_bookings')
+    .update({
+      status: 'closed',
+      payment_amount: paymentAmount,
+    })
+    .eq('id', bookingId);
+
+  if (error) console.error('Failed to close booking:', error);
 }
 
 // ═══════════════════════════════════════════
@@ -103,6 +218,8 @@ function updateFloorPlan() {
     el.classList.add('available');
     const oldBadge = el.querySelector('.fp-badge');
     if (oldBadge) oldBadge.remove();
+    const oldInfo = el.querySelector('.fp-info');
+    if (oldInfo) oldInfo.remove();
 
     // Check if table has an active POS tab
     if (tableTabs[num]) {
@@ -147,8 +264,9 @@ function updateFloorPlan() {
   document.getElementById('tblStatReserved').textContent = reservedCount;
   document.getElementById('tblStatAvail').textContent = total - occupiedCount - reservedCount;
 
-  // Update active tables list
+  // Update panels
   renderActiveTablesList(tableTabs);
+  renderReservationsList();
 }
 
 function renderActiveTablesList(tableTabs) {
@@ -161,12 +279,15 @@ function renderActiveTablesList(tableTabs) {
     const section = getSectionForTable(parseInt(num));
     const sectionLabel = SECTION_LABELS[section] || '';
     const timeAgo = getTimeAgo(tab.createdAt);
+    const minInfo = typeof getMinSpendForTab === 'function' ? getMinSpendForTab(tab) : null;
     activeTables.push({
       num: parseInt(num),
       name: tab.name,
       total,
       meta: sectionLabel.split('(')[0].trim() + ' — ' + timeAgo,
       tabId: tab.id,
+      minSpend: minInfo ? minInfo.amount : (tab.minSpendRequired || 0),
+      memberName: tab.memberName || null,
     });
   }
 
@@ -181,6 +302,8 @@ function renderActiveTablesList(tableTabs) {
       total: 0,
       meta: sectionLabel.split('(')[0].trim() + (session.server_name ? ' — ' + session.server_name : ''),
       tabId: null,
+      minSpend: 0,
+      memberName: null,
     });
   }
 
@@ -191,15 +314,128 @@ function renderActiveTablesList(tableTabs) {
 
   activeTables.sort((a, b) => a.num - b.num);
 
-  list.innerHTML = activeTables.map(t =>
-    `<div class="tables-active-row" onclick="tableClick(${t.num})">
+  list.innerHTML = activeTables.map(t => {
+    const minBadge = t.minSpend > 0 ? `<span class="min-badge ${t.total >= t.minSpend ? 'met' : ''}">$${t.total.toFixed(0)}/$${t.minSpend.toFixed(0)}</span>` : '';
+    const memberBadge = t.memberName ? `<span class="member-badge">${t.memberName}</span>` : '';
+    return `<div class="tables-active-row" onclick="tableClick(${t.num})">
       <div>
-        <div class="tables-active-name">Table ${t.num}${t.name && !t.name.startsWith('Table') ? ' — ' + t.name : ''}</div>
-        <div class="tables-active-meta">${t.meta}</div>
+        <div class="tables-active-name">Table ${t.num}${t.name && !t.name.startsWith('Table') ? ' — ' + t.name : ''} ${memberBadge}</div>
+        <div class="tables-active-meta">${t.meta} ${minBadge}</div>
       </div>
       ${t.total > 0 ? `<div class="tables-active-total">$${t.total.toFixed(0)}</div>` : ''}
-    </div>`
-  ).join('');
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+// RESERVATIONS LIST (tonight's bookings)
+// ═══════════════════════════════════════════
+
+function renderReservationsList() {
+  const list = document.getElementById('reservationsList');
+  if (!list) return;
+
+  const reservations = Object.values(tableReservations);
+  if (reservations.length === 0) {
+    list.innerHTML = '<div class="tables-active-empty">No reservations tonight</div>';
+    return;
+  }
+
+  // Sort by table number
+  reservations.sort((a, b) => a.table_number - b.table_number);
+
+  list.innerHTML = reservations.map(r => {
+    const eventName = r._event ? r._event.title : '';
+    const minSpend = r.minimum_spend_required ? '$' + parseFloat(r.minimum_spend_required).toFixed(0) + ' min' : '';
+    const deposit = r.deposit_paid && r.deposit_amount ? '$' + parseFloat(r.deposit_amount).toFixed(0) + ' deposit' : '';
+    const source = r.booking_source === 'member' ? 'MEMBER' : '';
+    return `<div class="reservation-row" onclick="seatFromReservation(${r.table_number})">
+      <div class="reservation-info">
+        <div class="reservation-name">T${r.table_number} — ${r.guest_name}</div>
+        <div class="reservation-meta">
+          ${r.party_size} guests${r.section_name ? ' — ' + r.section_name : ''}
+          ${eventName ? ' — ' + eventName : ''}
+        </div>
+        <div class="reservation-tags">
+          ${minSpend ? `<span class="res-tag">${minSpend}</span>` : ''}
+          ${deposit ? `<span class="res-tag deposit">${deposit}</span>` : ''}
+          ${source ? `<span class="res-tag member">${source}</span>` : ''}
+        </div>
+      </div>
+      <button class="seat-btn-small" onclick="event.stopPropagation(); seatFromReservation(${r.table_number})">SEAT</button>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+// SEAT FROM RESERVATION — create session + tab
+// ═══════════════════════════════════════════
+
+async function seatFromReservation(tableNum) {
+  const booking = tableReservations[tableNum];
+  if (!booking) {
+    showToast('No reservation for table ' + tableNum);
+    return;
+  }
+
+  // Check if already has a POS tab
+  const existing = tabs.find(t =>
+    t.tableNum === tableNum && (t.status === 'open' || t.status === 'sent')
+  );
+  if (existing) {
+    activeTabId = existing.id;
+    renderTabs();
+    renderCart();
+    switchView('terminal');
+    return;
+  }
+
+  // Create POS tab linked to this reservation
+  const tabName = 'T' + tableNum + ' — ' + booking.guest_name;
+  const tab = await createTab(tabName, 'table');
+  tab.tableNum = tableNum;
+  tab.section = getSectionForTable(tableNum) || booking.section_name;
+  tab.guestCount = booking.party_size || 1;
+  tab.guestName = booking.guest_name;
+  tab.guestPhone = booking.guest_phone || null;
+  tab.bookingId = booking.id;
+  tab.bookingNotes = booking.notes || null;
+  tab.memberId = booking.member_id || null;
+
+  // Transfer min spend from booking
+  if (booking.minimum_spend_required) {
+    tab.minSpendRequired = parseFloat(booking.minimum_spend_required);
+  }
+
+  // Transfer deposit
+  if (booking.deposit_paid && booking.deposit_amount) {
+    tab.depositAmount = parseFloat(booking.deposit_amount);
+  }
+
+  // Create table_session in Supabase
+  await createTableSession(tab);
+
+  // Mark booking as seated
+  await seatReservation(booking.id);
+
+  // Move from reservations to sessions in local state
+  delete tableReservations[tableNum];
+
+  // If member booking, load member details
+  if (booking.member_id) {
+    const member = await lookupMemberById(booking.member_id);
+    if (member) {
+      tab.memberName = member.first_name + ' ' + (member.last_name || '');
+      tab.memberTier = member.tier;
+      tab.memberPoints = member.total_points;
+    }
+  }
+
+  renderTabs();
+  renderCart();
+  updateFloorPlan();
+  switchView('terminal');
+  showToast('Seated: ' + booking.guest_name + ' — Table ' + tableNum);
 }
 
 function getTimeAgo(date) {
@@ -214,7 +450,7 @@ function getTimeAgo(date) {
 // TABLE CLICK — open/select tab for table
 // ═══════════════════════════════════════════
 
-function tableClick(tableNum) {
+async function tableClick(tableNum) {
   // Check if there's already an open POS tab for this table
   const existing = tabs.find(t =>
     t.tableNum === tableNum && (t.status === 'open' || t.status === 'sent')
@@ -229,26 +465,38 @@ function tableClick(tableNum) {
     return;
   }
 
-  // Create a new tab linked to this table
+  // If there's a confirmed reservation, seat via reservation flow
+  if (tableReservations[tableNum]) {
+    await seatFromReservation(tableNum);
+    return;
+  }
+
+  // Walk-in seating — create a new tab linked to this table
   const section = getSectionForTable(tableNum);
-  const tab = createTab('Table ' + tableNum, 'table');
+  const tab = await createTab('Table ' + tableNum, 'table');
   tab.tableNum = tableNum;
   tab.section = section;
 
-  // If there's a Supabase session for this table, link it
+  // If there's a Supabase session for this table (seated via staff portal), link it
   if (tableSessions[tableNum]) {
     const session = tableSessions[tableNum];
     tab.sessionId = session.id;
     if (session.guest_name) {
       tab.name = 'T' + tableNum + ' — ' + session.guest_name;
+      tab.guestName = session.guest_name;
     }
-    if (session.booking_id) {
-      tab.bookingId = session.booking_id;
-    }
+    if (session.guest_phone) tab.guestPhone = session.guest_phone;
+    if (session.booking_id) tab.bookingId = session.booking_id;
+    if (session.member_id) tab.memberId = session.member_id;
+    if (session.party_size) tab.guestCount = session.party_size;
+  } else {
+    // No existing session — create one in Supabase
+    await createTableSession(tab);
   }
 
   renderTabs();
   renderCart();
+  updateFloorPlan();
   switchView('terminal');
 }
 
@@ -279,9 +527,10 @@ function openRecallTabs() {
     const total = tabTotal(t);
     const items = t.lines.filter(l => !l.voided).length;
     const timeAgo = getTimeAgo(t.createdAt);
+    const memberBadge = t.memberName ? `<span class="member-badge">${t.memberName}</span>` : '';
     return `<div class="recall-tab-row" onclick="recallTab('${t.id}')">
       <div class="recall-tab-info">
-        <div class="recall-tab-name">${t.name}</div>
+        <div class="recall-tab-name">${t.name} ${memberBadge}</div>
         <div class="recall-tab-meta">${items} items — ${t.type} — ${timeAgo}</div>
       </div>
       <div class="recall-tab-total">${total > 0 ? '$' + total.toFixed(2) : ''}</div>

@@ -211,6 +211,14 @@
         <button class="tables-action-btn green" onclick="fastBar()">FAST BAR</button>
       </div>
 
+      <!-- Reservations Tonight -->
+      <div class="tables-active">
+        <div class="tables-active-title">RESERVATIONS</div>
+        <div id="reservationsList" class="tables-active-list">
+          <div class="tables-active-empty">No reservations tonight</div>
+        </div>
+      </div>
+
       <!-- Active Tables List -->
       <div class="tables-active">
         <div class="tables-active-title">ACTIVE TABLES</div>
@@ -360,10 +368,14 @@
       <button class="modal-close" onclick="closeModal('paymentModal')">X</button>
     </div>
     <div class="modal-body">
+      <div id="payMemberInfo" style="display:none"></div>
+      <div id="payMinSpendWarning" style="display:none"></div>
       <div class="pay-amount">
         <div class="pay-amount-label">TOTAL DUE</div>
         <div id="payAmountValue" class="pay-amount-value">$0.00</div>
+        <div id="payDepositLine" class="pay-deposit-line" style="display:none"></div>
       </div>
+      <div id="payDepositInfo" style="display:none"></div>
 
       <div class="pay-methods">
         <button class="pay-method-btn card selected" data-method="card" onclick="selectPayMethod('card')">CARD</button>
@@ -658,6 +670,27 @@
   </div>
 </div>
 
+<!-- ════════════════════════════════════════
+     MEMBER LOOKUP MODAL
+     ════════════════════════════════════════ -->
+<div id="memberLookupModal" class="modal-overlay">
+  <div class="modal" style="width:520px">
+    <div class="modal-header">
+      <div class="modal-title">MEMBER LOOKUP</div>
+      <button class="modal-close" onclick="closeModal('memberLookupModal')">X</button>
+    </div>
+    <div class="modal-body">
+      <input id="memberSearchInput" class="member-search-input" type="tel"
+             placeholder="Enter phone number"
+             onkeyup="memberSearchKeyup(event)"
+             autocomplete="off">
+      <div id="memberSearchResults" class="member-search-results">
+        <div class="member-search-hint">Enter phone number to search</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Socket.IO client — try local server first, fall back to CDN -->
 <script src="/socket.io/socket.io.js" onerror="
   var s=document.createElement('script');
@@ -683,6 +716,9 @@
 <script src="js/editcheck.js"></script>
 <script src="js/clock.js"></script>
 <script src="js/seats.js"></script>
+
+<!-- Members -->
+<script src="js/members.js"></script>
 
 <!-- Floor plan -->
 <script src="js/tables.js"></script>

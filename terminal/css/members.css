@@ -1,0 +1,244 @@
+/* RIDDIM POS — Member Lookup + Reservation Styles */
+
+/* ── Member Search Modal ── */
+.member-search-input {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--obsidian-mid);
+  border: 1px solid var(--surface-active);
+  border-radius: var(--radius);
+  color: var(--ivory);
+  font-family: var(--font-body);
+  font-size: 18px;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+.member-search-input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+.member-search-input::placeholder { color: var(--ash); }
+
+.member-search-results {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.member-search-hint {
+  text-align: center;
+  color: var(--ash);
+  font-size: 13px;
+  padding: 24px 0;
+  font-family: var(--font-body);
+}
+
+.member-result {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--surface);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.member-result:hover { background: var(--surface-hover); }
+.member-result:active { background: var(--surface-active); }
+
+.member-result-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.member-result-name {
+  font-family: var(--font-label);
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: var(--ivory);
+}
+.member-tier-badge {
+  font-family: var(--font-label);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  padding: 2px 8px;
+  border: 1px solid;
+  border-radius: 3px;
+}
+.member-result-meta {
+  font-size: 11px;
+  color: var(--ash);
+}
+
+/* ── Member Badge in Cart ── */
+.cart-member-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(212, 168, 67, 0.08);
+  border: 1px solid rgba(212, 168, 67, 0.2);
+  border-radius: var(--radius);
+  margin-bottom: 6px;
+}
+.member-tier-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cart-member-name {
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--ivory);
+}
+.cart-member-tier {
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  margin-left: auto;
+}
+
+/* ── Member Badge in Lists ── */
+.member-badge {
+  font-family: var(--font-label);
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--gold);
+  background: rgba(212, 168, 67, 0.12);
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-left: 6px;
+}
+
+/* ── Min Spend Badge in Active Tables ── */
+.min-badge {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--red);
+  background: rgba(231, 76, 60, 0.1);
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-left: 6px;
+}
+.min-badge.met {
+  color: var(--green);
+  background: rgba(39, 174, 96, 0.1);
+}
+
+/* ── Booking Min Spend Bar ── */
+.min-spend-bar.booking-min .min-spend-label {
+  color: var(--blue);
+}
+
+/* ── Reservations List ── */
+.reservation-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--surface);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.reservation-row:hover { background: var(--surface-hover); }
+.reservation-row:active { background: var(--surface-active); }
+
+.reservation-info { flex: 1; min-width: 0; }
+.reservation-name {
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--ivory);
+}
+.reservation-meta {
+  font-size: 11px;
+  color: var(--ash);
+  margin-top: 2px;
+}
+.reservation-tags {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.res-tag {
+  font-family: var(--font-label);
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(136, 136, 136, 0.15);
+  color: var(--ash);
+}
+.res-tag.deposit {
+  background: rgba(39, 174, 96, 0.12);
+  color: var(--green);
+}
+.res-tag.member {
+  background: rgba(212, 168, 67, 0.12);
+  color: var(--gold);
+}
+
+.seat-btn-small {
+  font-family: var(--font-label);
+  font-size: 12px;
+  letter-spacing: 2px;
+  padding: 6px 14px;
+  background: rgba(212, 168, 67, 0.15);
+  color: var(--gold);
+  border: 1px solid rgba(212, 168, 67, 0.3);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.seat-btn-small:hover {
+  background: rgba(212, 168, 67, 0.25);
+}
+.seat-btn-small:active {
+  background: var(--gold);
+  color: var(--obsidian);
+}
+
+/* ── Payment Modal Extras ── */
+.pay-min-warn {
+  padding: 10px 14px;
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  border-radius: var(--radius);
+  color: var(--red);
+  font-family: var(--font-label);
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.pay-deposit-info {
+  padding: 8px 14px;
+  background: rgba(39, 174, 96, 0.08);
+  border: 1px solid rgba(39, 174, 96, 0.2);
+  border-radius: var(--radius);
+  color: var(--green);
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.pay-member-info {
+  padding: 8px 14px;
+  background: rgba(212, 168, 67, 0.08);
+  border: 1px solid rgba(212, 168, 67, 0.2);
+  border-radius: var(--radius);
+  color: var(--gold);
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.pay-deposit-line {
+  font-size: 13px;
+  color: var(--green);
+  margin-top: 4px;
+}

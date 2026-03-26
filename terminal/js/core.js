@@ -227,8 +227,13 @@ function createQuickTab(type) {
   } else if (type === 'walkin') {
     createTab('Walk-in ' + nextTabNum, 'bar');
   } else if (type === 'member') {
-    // TODO: member lookup from Supabase
-    createTab('Member', 'member');
+    closeModal('newTabModal');
+    if (typeof openMemberLookup === 'function') {
+      openMemberLookup();
+    } else {
+      createTab('Member', 'member');
+    }
+    return;
   } else if (type === 'table') {
     closeModal('newTabModal');
     switchView('tables');
@@ -264,6 +269,12 @@ document.addEventListener('keydown', (e) => {
   // Recall tabs modal — Escape to close
   if (document.getElementById('recallTabsModal').classList.contains('active')) {
     if (e.key === 'Escape') closeModal('recallTabsModal');
+    return;
+  }
+
+  // Member lookup modal — Escape to close
+  if (document.getElementById('memberLookupModal') && document.getElementById('memberLookupModal').classList.contains('active')) {
+    if (e.key === 'Escape') closeModal('memberLookupModal');
     return;
   }
 

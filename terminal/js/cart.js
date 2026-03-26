@@ -126,6 +126,12 @@ function submitVoidReason() {
 
     // Persist to local server
     if (typeof serverVoidOrder === 'function') serverVoidOrder(tab, fullReason);
+
+    // Clean up table session if tab was linked to a table
+    if (tab.sessionId && typeof closeTableSession === 'function') {
+      closeTableSession(tab);
+    }
+    if (typeof updateFloorPlan === 'function') updateFloorPlan();
   }
 }
 
@@ -193,10 +199,28 @@ function renderCart() {
   typeEl.textContent = tab.type.toUpperCase() + ' TAB';
   if (editBtn) editBtn.style.display = '';
 
-  // Bottle service: guest count + min spend bar (injected above cart items)
+  // Member badge + Bottle service: guest count + min spend bar (injected above cart items)
   let cartExtras = '';
+  if (typeof renderMemberBadge === 'function') cartExtras += renderMemberBadge(tab);
   if (typeof renderGuestCountBar === 'function') cartExtras += renderGuestCountBar(tab);
   if (typeof renderMinSpendBar === 'function') cartExtras += renderMinSpendBar(tab);
+  // Booking-level min spend (from reservation) overrides table_minimums
+  if (tab.minSpendRequired && tab.minSpendRequired > 0 && typeof renderMinSpendBar === 'function') {
+    const spent = tabSubtotal(tab);
+    const pct = Math.min((spent / tab.minSpendRequired) * 100, 100);
+    const met = spent >= tab.minSpendRequired;
+    const fillClass = met ? 'met' : pct >= 75 ? 'close' : 'under';
+    // Only render if getMinSpendForTab didn't already cover it
+    if (!getMinSpendForTab || !getMinSpendForTab(tab)) {
+      cartExtras += `<div class="min-spend-bar booking-min">
+        <span class="min-spend-label">BOOKING MIN</span>
+        <div class="min-spend-track">
+          <div class="min-spend-fill ${fillClass}" style="width:${pct}%"></div>
+        </div>
+        <span class="min-spend-val ${met ? 'met' : ''}">$${spent.toFixed(0)} / $${tab.minSpendRequired.toFixed(0)}</span>
+      </div>`;
+    }
+  }
 
   // Group lines by seat if any lines have seats
   const hasSeats = tab.lines.some(l => l.seat);

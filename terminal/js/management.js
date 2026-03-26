@@ -24,12 +24,15 @@ function switchView(view) {
   if (view === 'tables') {
     tablesPanel.classList.add('active');
     navTables.classList.add('active');
-    updateFloorPlan();
+    loadTableData().then(() => updateFloorPlan());
+    if (typeof startTableRefresh === 'function') startTableRefresh();
   } else if (view === 'management') {
+    if (typeof stopTableRefresh === 'function') stopTableRefresh();
     mgmtPanel.style.display = 'flex';
     navManagement.classList.add('active');
     renderMgmtMenu();
   } else {
+    if (typeof stopTableRefresh === 'function') stopTableRefresh();
     terminalBody.style.display = 'flex';
     navTerminal.classList.add('active');
   }
