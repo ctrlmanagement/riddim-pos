@@ -510,6 +510,24 @@
 </div>
 
 <!-- ════════════════════════════════════════
+     RECEIPT PREVIEW MODAL
+     ════════════════════════════════════════ -->
+<div id="receiptModal" class="modal-overlay">
+  <div class="modal receipt-modal">
+    <div class="modal-header">
+      <div class="modal-title">RECEIPT</div>
+      <button class="modal-close" onclick="closeReceipt()">X</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div id="receiptBody" class="receipt"></div>
+      <div class="receipt-actions">
+        <button class="receipt-close-btn" onclick="closeReceipt()">CLOSE</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
      86 LIST MODAL
      ════════════════════════════════════════ -->
 <div id="eightySixModal" class="modal-overlay">
