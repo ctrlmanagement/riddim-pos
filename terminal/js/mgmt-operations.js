@@ -309,11 +309,10 @@ async function reopenCheck(tabId) {
     return;
   }
 
-  const isOwner = currentUser && currentUser.role === 'owner';
   const hasDeposit = (tab.depositAmount && tab.depositAmount > 0) || tab.bookingId;
 
-  if (hasDeposit && !isOwner) {
-    showToast('Owner authorization required — check has a booking deposit');
+  if (hasDeposit && !perms.has('tab.reopen_deposit')) {
+    showToast('No permission to reopen deposit checks — requires tab.reopen_deposit');
     return;
   }
 

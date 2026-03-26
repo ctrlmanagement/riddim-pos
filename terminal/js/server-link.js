@@ -309,7 +309,14 @@ function server86Toggle(itemId, is86) {
 // ── HYDRATE TABS FROM SERVER ────────────────────────────────
 // Load today's orders from local PG and populate the in-memory tabs array
 async function hydrateTabsFromServer() {
-  const data = await serverGet('/api/orders/today/all');
+  // Try serverGet first, fall back to direct fetch if not connected yet
+  let data = await serverGet('/api/orders/today/all');
+  if (!data && SERVER_URL) {
+    try {
+      const res = await fetch(SERVER_URL + '/api/orders/today/all');
+      if (res.ok) data = await res.json();
+    } catch(e) { /* no server */ }
+  }
   if (!data || !Array.isArray(data)) return 0;
 
   let loaded = 0;

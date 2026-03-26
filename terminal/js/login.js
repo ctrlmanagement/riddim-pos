@@ -93,6 +93,10 @@ async function enterTerminal() {
   // Connect to local server + hydrate tabs from PG
   if (typeof initServerLink === 'function') {
     await initServerLink();
+    // Wait briefly for server connection to establish
+    if (!serverConnected && SERVER_URL) {
+      await new Promise(r => setTimeout(r, 500));
+    }
     // Load today's orders from local server (survives terminal restart)
     if (typeof hydrateTabsFromServer === 'function') {
       const loaded = await hydrateTabsFromServer();
@@ -104,6 +108,8 @@ async function enterTerminal() {
             await applyBookingToTab(tab, tab.bookingId);
           }
         }
+        renderTabs();
+        renderCart();
       }
     }
   }
