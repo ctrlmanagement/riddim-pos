@@ -37,6 +37,11 @@ function showReceipt(tab) {
   html += '<div class="rcpt-center rcpt-sm">Atlanta, GA</div>';
   html += '<hr class="rcpt-divider">';
 
+  // Order / Sale IDs
+  const orderNum = tab.orderNum || '—';
+  const saleNum = tab.saleNum || '—';
+  html += `<div class="rcpt-row"><span>Order #${orderNum}</span><span>Sale ID: ${saleNum}</span></div>`;
+
   // Meta
   html += `<div class="rcpt-row"><span>${tab.name}</span><span>${tab.payMethod ? tab.payMethod.toUpperCase() : ''}</span></div>`;
   html += `<div class="rcpt-row"><span>Server: ${server}</span><span>${STATION.label}</span></div>`;

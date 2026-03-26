@@ -133,6 +133,7 @@ async function serverCreateOrder(tab) {
   });
   if (order) {
     tab.serverId = order.id; // link in-memory tab to server order
+    tab.orderNum = order.order_num; // sequential order number for receipts
     if (socket) socket.emit('order:created', order);
   }
   return order;
@@ -206,7 +207,14 @@ async function serverPayOrder(tab, method, amount, tipAmount) {
     tip_amount: tipAmount,
     processed_by: currentUser.id,
   });
-  if (result && socket) socket.emit('order:paid', result);
+  if (result) {
+    // Capture sale number from payment record
+    if (result.payments && result.payments.length) {
+      const lastPayment = result.payments[result.payments.length - 1];
+      tab.saleNum = lastPayment.sale_num;
+    }
+    if (socket) socket.emit('order:paid', result);
+  }
   return result;
 }
 

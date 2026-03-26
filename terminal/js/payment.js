@@ -50,7 +50,7 @@ function updateTipButtons() {
   document.getElementById('payAmountValue').textContent = '$' + grand.toFixed(2);
 }
 
-function submitPayment() {
+async function submitPayment() {
   const tab = getActiveTab();
   if (!tab) return;
 
@@ -80,13 +80,14 @@ function submitPayment() {
   }
 
   closeModal('paymentModal');
-  showReceipt(tab);
   renderTabs();
   renderCart();
 
-  // Persist to local server
+  // Persist to local server — await so sale_num is available for receipt
   if (typeof serverPayOrder === 'function') {
     const total = tabTotal(tab);
-    serverPayOrder(tab, selectedPayMethod, total, tab.tipAmount || 0);
+    await serverPayOrder(tab, selectedPayMethod, total, tab.tipAmount || 0);
   }
+
+  showReceipt(tab);
 }

@@ -3,9 +3,14 @@
 -- Run against the riddim_pos database
 -- ============================================
 
+-- Sequential IDs for receipts (like HotSauce Order ID / Sale ID)
+CREATE SEQUENCE IF NOT EXISTS pos_order_num_seq START 1001;
+CREATE SEQUENCE IF NOT EXISTS pos_sale_num_seq START 1001;
+
 -- Orders (tabs are just orders in open/sent/held state)
 CREATE TABLE IF NOT EXISTS pos_orders (
     id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    order_num       integer DEFAULT nextval('pos_order_num_seq'),
     tab_name        text,                           -- "John's tab", "Bar 7", etc.
     table_num       integer,                        -- floor plan table number
     member_id       uuid,                           -- FK to Supabase members (synced)
@@ -69,6 +74,7 @@ CREATE INDEX idx_lines_state ON pos_order_lines(state);
 -- Payments
 CREATE TABLE IF NOT EXISTS pos_payments (
     id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    sale_num        integer DEFAULT nextval('pos_sale_num_seq'),
     order_id        uuid NOT NULL REFERENCES pos_orders(id) ON DELETE CASCADE,
     method          text NOT NULL,                  -- card, cash, comp
     amount          numeric(10,2) NOT NULL,

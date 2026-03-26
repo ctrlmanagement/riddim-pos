@@ -14,6 +14,15 @@ const io = new Server(server, {
 
 app.use(express.json());
 
+// CORS — allow BOH portal (GitHub Pages) and local dev to query the API
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
+
 // ── STATIC FILES ────────────────────────────────────────────
 // Serve terminal UI
 app.use('/terminal', express.static(path.join(__dirname, '..', 'terminal')));
@@ -24,9 +33,11 @@ app.use('/kds', express.static(path.join(__dirname, '..', 'kds')));
 // ── REST ROUTES ─────────────────────────────────────────────
 const ordersRouter = require('./routes/orders');
 const clockRouter = require('./routes/clock');
+const transactionsRouter = require('./routes/transactions');
 
 app.use('/api/orders', ordersRouter);
 app.use('/api/clock', clockRouter);
+app.use('/api/transactions', transactionsRouter);
 
 // Health check
 app.get('/api/health', async (req, res) => {
