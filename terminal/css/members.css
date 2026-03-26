@@ -248,3 +248,16 @@
   color: var(--green);
   margin-top: 4px;
 }
+
+.pay-deposit-surplus {
+  padding: 6px 14px;
+  background: rgba(243, 156, 18, 0.08);
+  border: 1px solid rgba(243, 156, 18, 0.2);
+  border-radius: var(--radius);
+  color: var(--orange);
+  font-family: var(--font-label);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-align: center;
+  margin-top: 4px;
+}

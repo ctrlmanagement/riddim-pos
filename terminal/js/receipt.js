@@ -71,12 +71,20 @@ function showReceipt(tab) {
   if (tip > 0 && !tab.autoGrat) {
     html += `<div class="rcpt-row"><span>Tip</span><span>$${tip.toFixed(2)}</span></div>`;
   }
-  // Deposit credit
-  const deposit = tab.depositAmount || 0;
-  if (deposit > 0) {
-    html += `<div class="rcpt-row"><span>Deposit Applied</span><span>-$${deposit.toFixed(2)}</span></div>`;
-    const balanceDue = Math.max(0, total - deposit);
-    html += `<div class="rcpt-row total"><span>BALANCE DUE</span><span>$${balanceDue.toFixed(2)}</span></div>`;
+  // Deposit split payment
+  const depositUsed = tab.depositUsed || 0;
+  const depositUnused = tab.depositUnused || 0;
+  const balanceDue = tab.balanceDue || 0;
+
+  if (depositUsed > 0) {
+    html += `<div class="rcpt-row"><span>Deposit Applied</span><span>-$${depositUsed.toFixed(2)}</span></div>`;
+    if (depositUnused > 0) {
+      html += `<div class="rcpt-row"><span>Unused Deposit → Other Income</span><span>$${depositUnused.toFixed(2)}</span></div>`;
+    }
+    if (balanceDue > 0) {
+      html += `<div class="rcpt-row"><span>Balance (${(tab.payMethod || 'card').toUpperCase()})</span><span>$${balanceDue.toFixed(2)}</span></div>`;
+    }
+    html += `<div class="rcpt-row total"><span>TOTAL</span><span>$${total.toFixed(2)}</span></div>`;
   } else {
     html += `<div class="rcpt-row total"><span>TOTAL</span><span>$${total.toFixed(2)}</span></div>`;
   }
