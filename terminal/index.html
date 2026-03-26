@@ -682,9 +682,9 @@
     <div class="modal-body">
       <input id="memberSearchInput" class="member-search-input" type="tel"
              placeholder="Enter phone number"
-             onkeyup="memberSearchKeyup(event)"
+             oninput="memberSearchKeyup(event)"
              autocomplete="off">
-      <div id="memberSearchResults" class="member-search-results">
+      <div id="memberSearchResults" class="member-search-results" style="min-height:80px;display:block;overflow-y:auto;"
         <div class="member-search-hint">Enter phone number to search</div>
       </div>
     </div>

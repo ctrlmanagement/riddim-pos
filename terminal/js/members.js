@@ -21,9 +21,11 @@ function getMemberTier(points) {
 
 let memberSearchResults = [];
 let memberSearchTimeout = null;
+let lastSearchDigits = '';
 
 function openMemberLookup() {
   memberSearchResults = [];
+  lastSearchDigits = '';
   const input = document.getElementById('memberSearchInput');
   if (input) input.value = '';
   const results = document.getElementById('memberSearchResults');
@@ -35,14 +37,20 @@ function openMemberLookup() {
 function memberSearchKeyup(e) {
   const raw = document.getElementById('memberSearchInput').value.replace(/\D/g, '');
 
+  // Skip if digits haven't changed (prevents oninput+onkeyup double-fire)
+  if (raw === lastSearchDigits) return;
+  lastSearchDigits = raw;
+
+  const results = document.getElementById('memberSearchResults');
+
   // Debounce — wait 300ms after last keypress
   clearTimeout(memberSearchTimeout);
   if (raw.length < 4) {
-    document.getElementById('memberSearchResults').innerHTML =
-      '<div class="member-search-hint">Enter at least 4 digits</div>';
+    results.innerHTML = '<div class="member-search-hint">Enter at least 4 digits</div>';
     return;
   }
 
+  results.innerHTML = '<div class="member-search-hint">Searching...</div>';
   memberSearchTimeout = setTimeout(() => searchMembers(raw), 300);
 }
 
@@ -71,22 +79,30 @@ async function searchMembers(digits) {
     return;
   }
 
-  results.innerHTML = memberSearchResults.map(m => {
-    const tier = getMemberTier(m.total_points || 0);
-    const visits = m.visit_count || 0;
-    const lastVisit = m.last_visit_date
-      ? new Date(m.last_visit_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      : 'never';
-    return `<div class="member-result" onclick="selectMember('${m.id}')">
-      <div class="member-result-main">
-        <span class="member-result-name">${m.first_name} ${m.last_name || ''}</span>
-        <span class="member-tier-badge" style="border-color:${tier.border};color:${tier.color}">${tier.name}</span>
-      </div>
-      <div class="member-result-meta">
-        ${formatPhone(m.phone)} — ${m.total_points || 0} pts — ${visits} visits — last: ${lastVisit}
-      </div>
-    </div>`;
-  }).join('');
+  try {
+    let html = '';
+    for (const m of memberSearchResults) {
+      const tier = getMemberTier(m.total_points || 0);
+      const visits = m.visit_count || 0;
+      const lastVisit = m.last_visit_date
+        ? new Date(m.last_visit_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        : 'never';
+      const escapedId = String(m.id).replace(/'/g, "\\'");
+      html += `<div class="member-result" style="display:block;padding:14px;background:#1A1A1A;border:1px solid #D4A843;border-radius:6px;margin-bottom:8px;cursor:pointer;" onclick="selectMember('${escapedId}')">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;color:#F5F0E8;">${m.first_name} ${m.last_name || ''}</span>
+          <span style="font-size:10px;letter-spacing:1.5px;padding:2px 8px;border:1px solid ${tier.border};color:${tier.color};border-radius:3px;font-family:'Bebas Neue',sans-serif;">${tier.name}</span>
+        </div>
+        <div style="font-size:12px;color:#888888;">
+          ${formatPhone(m.phone)} — ${m.total_points || 0} pts — ${visits} visits — last: ${lastVisit}
+        </div>
+      </div>`;
+    }
+    results.innerHTML = html;
+  } catch (err) {
+    console.error('Member render error:', err);
+    results.innerHTML = '<div class="member-search-hint">Render error: ' + err.message + '</div>';
+  }
 }
 
 function formatPhone(phone) {
