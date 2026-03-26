@@ -33,6 +33,42 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ── GET today's orders with lines and payments ───────────────
+router.get('/today/all', async (req, res) => {
+  try {
+    const { rows: orders } = await pool.query(
+      `SELECT * FROM pos_orders WHERE opened_at >= CURRENT_DATE ORDER BY opened_at DESC`
+    );
+    if (!orders.length) return res.json([]);
+
+    const ids = orders.map(o => o.id);
+    const { rows: lines } = await pool.query(
+      `SELECT * FROM pos_order_lines WHERE order_id = ANY($1) ORDER BY added_at`,
+      [ids]
+    );
+    const { rows: payments } = await pool.query(
+      `SELECT * FROM pos_payments WHERE order_id = ANY($1) ORDER BY processed_at`,
+      [ids]
+    );
+
+    // Group lines and payments by order
+    const linesByOrder = {};
+    lines.forEach(l => { (linesByOrder[l.order_id] = linesByOrder[l.order_id] || []).push(l); });
+    const paysByOrder = {};
+    payments.forEach(p => { (paysByOrder[p.order_id] = paysByOrder[p.order_id] || []).push(p); });
+
+    const result = orders.map(o => ({
+      ...o,
+      lines: linesByOrder[o.id] || [],
+      payments: paysByOrder[o.id] || [],
+    }));
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── GET single order with lines and payments ────────────────
 router.get('/:id', async (req, res) => {
   try {

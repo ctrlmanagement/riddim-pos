@@ -303,3 +303,83 @@ async function serverAuditLog(type, detail, reason) {
 function server86Toggle(itemId, is86) {
   if (socket) socket.emit('86:toggle', { itemId, is86 });
 }
+
+// ── HYDRATE TABS FROM SERVER ────────────────────────────────
+// Load today's orders from local PG and populate the in-memory tabs array
+async function hydrateTabsFromServer() {
+  const data = await serverGet('/api/orders/today/all');
+  if (!data || !Array.isArray(data)) return 0;
+
+  let loaded = 0;
+  for (const order of data) {
+    // Skip if already in tabs (e.g. created this session)
+    if (tabs.find(t => t.serverId === order.id)) continue;
+
+    // Map server order → in-memory tab
+    const tab = {
+      id: 'tab-srv-' + order.id,
+      serverId: order.id,
+      num: order.order_num || 0,
+      orderNum: order.order_num,
+      name: order.tab_name || 'Order #' + order.order_num,
+      type: order.table_num ? 'table' : 'bar',
+      memberId: order.member_id || null,
+      tableNum: order.table_num || null,
+      discount: parseFloat(order.discount_pct) > 0 || parseFloat(order.discount_flat) > 0,
+      discountPct: parseFloat(order.discount_pct) || 0,
+      discountFlat: parseFloat(order.discount_flat) || 0,
+      discountBy: order.discount_by || null,
+      autoGrat: parseFloat(order.auto_grat_pct) || 0,
+      guestCount: order.customer_count || 1,
+      lines: (order.lines || []).map(l => ({
+        id: 'line-srv-' + l.id,
+        serverLineId: l.id,
+        menuItemId: l.menu_item_id,
+        name: l.name,
+        price: parseFloat(l.price),
+        qty: l.qty,
+        seat: l.seat || null,
+        status: l.state || 'pending',
+        voided: l.state === 'voided',
+        comped: l.state === 'comped',
+        voidReason: l.void_reason,
+        compReason: l.comp_reason,
+        invProductId: l.inv_product_id,
+        addedAt: new Date(l.added_at || l.created_at),
+        addedBy: l.added_by,
+      })),
+      status: mapServerState(order.state),
+      createdAt: new Date(order.opened_at || order.created_at),
+      createdBy: order.server_id,
+      station: order.station_code,
+      closedAt: order.closed_at ? new Date(order.closed_at) : null,
+      paidAt: order.paid_at ? new Date(order.paid_at) : null,
+      voidedAt: order.voided_at ? new Date(order.voided_at) : null,
+      voidReason: order.void_reason || null,
+    };
+
+    // Extract payment info from server payments
+    if (order.payments && order.payments.length > 0) {
+      const lastPay = order.payments[order.payments.length - 1];
+      tab.payMethod = lastPay.method;
+      tab.tipAmount = parseFloat(lastPay.tip_amount) || 0;
+      tab.saleNum = lastPay.sale_num;
+    }
+
+    tabs.push(tab);
+    loaded++;
+
+    // Track highest tab number for nextTabNum
+    if (tab.num >= nextTabNum) nextTabNum = tab.num + 1;
+  }
+
+  return loaded;
+}
+
+function mapServerState(state) {
+  if (state === 'paid' || state === 'closed') return 'closed';
+  if (state === 'voided') return 'voided';
+  if (state === 'held') return 'open';
+  if (state === 'sent') return 'sent';
+  return 'open';
+}

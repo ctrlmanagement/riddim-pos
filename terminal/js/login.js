@@ -83,15 +83,33 @@ async function attemptLogin() {
 // TERMINAL — Main Screen
 // ═══════════════════════════════════════════
 
-function enterTerminal() {
+async function enterTerminal() {
   showScreen('main');
   document.getElementById('topBarUser').textContent = currentUser.name;
   document.getElementById('topBarStation').textContent = STATION.label;
   updateManagementAccess();
   applyPermissionUI();
 
-  // Connect to local server
-  if (typeof initServerLink === 'function') initServerLink();
+  // Connect to local server + hydrate tabs from PG
+  if (typeof initServerLink === 'function') {
+    await initServerLink();
+    // Load today's orders from local server (survives terminal restart)
+    if (typeof hydrateTabsFromServer === 'function') {
+      const loaded = await hydrateTabsFromServer();
+      if (loaded > 0) {
+        console.log('Hydrated', loaded, 'tabs from server');
+        // Re-fetch booking data (deposits, min spend) for hydrated table tabs
+        for (const tab of tabs) {
+          if (tab.tableNum && !tab.depositAmount) {
+            const session = tableSessions ? tableSessions[tab.tableNum] : null;
+            if (session && session.booking_id && typeof applyBookingToTab === 'function') {
+              await applyBookingToTab(tab, session.booking_id);
+            }
+          }
+        }
+      }
+    }
+  }
 
   // Set first category as active
   if (MENU_CATEGORIES.length > 0 && !activeCategory) {
