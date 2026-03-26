@@ -10,21 +10,31 @@
 
 function switchView(view) {
   const terminalBody = document.querySelector('.main-body');
+  const tablesPanel = document.getElementById('tablesPanel');
   const mgmtPanel = document.getElementById('managementPanel');
+  const navTables = document.getElementById('navTables');
   const navTerminal = document.getElementById('navTerminal');
   const navManagement = document.getElementById('navManagement');
 
-  if (view === 'management') {
-    terminalBody.style.display = 'none';
+  // Hide all
+  terminalBody.style.display = 'none';
+  tablesPanel.classList.remove('active');
+  mgmtPanel.style.display = 'none';
+  navTables.classList.remove('active');
+  navTerminal.classList.remove('active');
+  navManagement.classList.remove('active');
+
+  if (view === 'tables') {
+    tablesPanel.classList.add('active');
+    navTables.classList.add('active');
+    updateFloorPlan();
+  } else if (view === 'management') {
     mgmtPanel.style.display = 'flex';
-    navTerminal.classList.remove('active');
     navManagement.classList.add('active');
     renderMgmtMenu();
   } else {
     terminalBody.style.display = 'flex';
-    mgmtPanel.style.display = 'none';
     navTerminal.classList.add('active');
-    navManagement.classList.remove('active');
   }
 }
 

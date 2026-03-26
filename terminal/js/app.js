@@ -243,6 +243,11 @@ function enterTerminal() {
   renderTabs();
   renderCart();
   startClock();
+
+  // Load table data and show tables view by default
+  loadTableData().then(() => {
+    switchView('tables');
+  });
 }
 
 function logout() {
@@ -313,7 +318,7 @@ function createTab(name, type = 'bar') {
     name: name || 'Tab ' + num,
     type: type,
     memberId: null,
-    tableId: null,
+    tableNum: null,
     lines: [],
     status: 'open',
     createdAt: new Date(),
@@ -694,8 +699,9 @@ function createQuickTab(type) {
     // TODO: member lookup from Supabase
     createTab('Member', 'member');
   } else if (type === 'table') {
-    // TODO: table selection from Supabase
-    createTab('Table', 'table');
+    closeModal('newTabModal');
+    switchView('tables');
+    return;
   }
 }
 
@@ -740,6 +746,12 @@ document.addEventListener('keydown', (e) => {
   // Payment modal — Escape to close
   if (document.getElementById('paymentModal').classList.contains('active')) {
     if (e.key === 'Escape') closeModal('paymentModal');
+    return;
+  }
+
+  // Recall tabs modal — Escape to close
+  if (document.getElementById('recallTabsModal').classList.contains('active')) {
+    if (e.key === 'Escape') closeModal('recallTabsModal');
     return;
   }
 });
