@@ -98,13 +98,10 @@ async function enterTerminal() {
       const loaded = await hydrateTabsFromServer();
       if (loaded > 0) {
         console.log('Hydrated', loaded, 'tabs from server');
-        // Re-fetch booking data (deposits, min spend) for hydrated table tabs
+        // Re-fetch booking data (deposits, min spend) for hydrated tabs
         for (const tab of tabs) {
-          if (tab.tableNum && !tab.depositAmount) {
-            const session = tableSessions ? tableSessions[tab.tableNum] : null;
-            if (session && session.booking_id && typeof applyBookingToTab === 'function') {
-              await applyBookingToTab(tab, session.booking_id);
-            }
+          if (tab.bookingId && !tab.depositAmount && typeof applyBookingToTab === 'function') {
+            await applyBookingToTab(tab, tab.bookingId);
           }
         }
       }

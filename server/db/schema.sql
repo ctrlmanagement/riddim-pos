@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS pos_orders (
     held_at         timestamptz,
     paid_at         timestamptz,
     closed_at       timestamptz,
+    booking_id      uuid,                           -- FK to Supabase table_bookings
+    session_id      uuid,                           -- FK to Supabase table_sessions
     synced_at       timestamptz,                    -- last sync to Supabase
     created_at      timestamptz DEFAULT now(),
     updated_at      timestamptz DEFAULT now()

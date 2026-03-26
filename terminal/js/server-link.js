@@ -151,6 +151,8 @@ async function serverCreateOrder(tab) {
     server_name: currentUser.name,
     station_code: STATION.code,
     customer_count: tab.guestCount || 1,
+    booking_id: tab.bookingId || null,
+    session_id: tab.sessionId || null,
   });
   if (order) {
     tab.serverId = order.id; // link in-memory tab to server order
@@ -355,6 +357,8 @@ async function hydrateTabsFromServer() {
       closedAt: order.closed_at ? new Date(order.closed_at) : null,
       paidAt: order.paid_at ? new Date(order.paid_at) : null,
       voidedAt: order.voided_at ? new Date(order.voided_at) : null,
+      bookingId: order.booking_id || null,
+      sessionId: order.session_id || null,
       voidReason: order.void_reason || null,
     };
 

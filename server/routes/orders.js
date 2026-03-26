@@ -92,12 +92,12 @@ router.get('/:id', async (req, res) => {
 // ── CREATE order (open tab) ─────────────────────────────────
 router.post('/', async (req, res) => {
   try {
-    const { tab_name, table_num, member_id, server_id, server_name, station_code, customer_count } = req.body;
+    const { tab_name, table_num, member_id, server_id, server_name, station_code, customer_count, booking_id, session_id } = req.body;
 
     const { rows } = await pool.query(
-      `INSERT INTO pos_orders (tab_name, table_num, member_id, server_id, server_name, station_code, customer_count)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [tab_name, table_num || null, member_id || null, server_id, server_name, station_code, customer_count || 1]
+      `INSERT INTO pos_orders (tab_name, table_num, member_id, server_id, server_name, station_code, customer_count, booking_id, session_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [tab_name, table_num || null, member_id || null, server_id, server_name, station_code, customer_count || 1, booking_id || null, session_id || null]
     );
 
     res.status(201).json(rows[0]);
