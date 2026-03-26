@@ -51,6 +51,7 @@ function switchMgmt(section) {
   if (section === 'stations') renderMgmtStations();
   if (section === 'reports') renderReport('summary');
   if (section === 'servers') renderMgmtServers();
+  if (section === 'clock') renderMgmtClock();
   if (section === 'checks') renderMgmtChecks();
   if (section === 'settings') renderMgmtSettings();
   if (section === 'dayclose') renderMgmtDayClose();
@@ -866,6 +867,130 @@ function mgmtSelectTab(tabId) {
   renderTabs();
   renderCart();
   switchView('terminal');
+}
+
+// ═══════════════════════════════════════════
+// STAFF CLOCK — view clock in/out status
+// ═══════════════════════════════════════════
+
+function renderMgmtClock() {
+  const list = document.getElementById('mgmtClockList');
+
+  // Build per-staff status from clockEntries (defined in features.js)
+  const staffStatus = {};
+  STAFF.forEach(s => {
+    staffStatus[s.id] = { name: s.name, role: s.role, entries: [], status: 'out' };
+  });
+
+  if (typeof clockEntries !== 'undefined') {
+    clockEntries.forEach(e => {
+      if (!staffStatus[e.staffId]) {
+        staffStatus[e.staffId] = { name: e.staffName, role: '', entries: [], status: 'out' };
+      }
+      staffStatus[e.staffId].entries.push(e);
+    });
+  }
+
+  // Determine current status for each staff member
+  const rows = Object.entries(staffStatus).map(([id, s]) => {
+    const sorted = s.entries.sort((a, b) => new Date(a.time) - new Date(b.time));
+    const last = sorted.length > 0 ? sorted[sorted.length - 1] : null;
+    const isClockedIn = last && last.type === 'in';
+
+    // Calculate total hours worked today
+    let totalMinutes = 0;
+    let clockInTime = null;
+    sorted.forEach(e => {
+      if (e.type === 'in') {
+        clockInTime = new Date(e.time);
+      } else if (e.type === 'out' && clockInTime) {
+        totalMinutes += Math.floor((new Date(e.time) - clockInTime) / 60000);
+        clockInTime = null;
+      }
+    });
+    // If still clocked in, add time to now
+    if (isClockedIn && clockInTime) {
+      totalMinutes += Math.floor((Date.now() - clockInTime) / 60000);
+    }
+
+    const hoursStr = totalMinutes > 0
+      ? Math.floor(totalMinutes / 60) + 'h ' + (totalMinutes % 60) + 'm'
+      : '—';
+    const clockInStr = last && last.type === 'in'
+      ? new Date(last.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+      : '';
+    const clockOutStr = last && last.type === 'out'
+      ? new Date(last.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+      : '';
+
+    return { id, name: s.name, role: s.role, isClockedIn, hoursStr, clockInStr, clockOutStr, hasEntries: sorted.length > 0 };
+  });
+
+  // Sort: clocked in first, then by name
+  rows.sort((a, b) => {
+    if (a.isClockedIn !== b.isClockedIn) return a.isClockedIn ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  // Split into clocked in and not
+  const clockedIn = rows.filter(r => r.isClockedIn);
+  const clockedOut = rows.filter(r => !r.isClockedIn);
+
+  let html = '';
+
+  if (clockedIn.length > 0) {
+    html += `<div class="clock-section-label">CLOCKED IN (${clockedIn.length})</div>`;
+    html += `<table class="mgmt-table">
+      <thead><tr><th>NAME</th><th>ROLE</th><th>IN AT</th><th>HOURS</th><th></th></tr></thead>
+      <tbody>
+        ${clockedIn.map(r => `<tr>
+          <td><span class="clock-dot in"></span> ${r.name}</td>
+          <td>${r.role}</td>
+          <td>${r.clockInStr}</td>
+          <td>${r.hoursStr}</td>
+          <td><button class="mgmt-edit-btn" onclick="mgmtForceClockOut('${r.id}')">CLOCK OUT</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  if (clockedOut.length > 0) {
+    html += `<div class="clock-section-label" style="margin-top:20px">NOT CLOCKED IN (${clockedOut.length})</div>`;
+    html += `<table class="mgmt-table">
+      <thead><tr><th>NAME</th><th>ROLE</th><th>LAST OUT</th><th>HOURS TODAY</th></tr></thead>
+      <tbody>
+        ${clockedOut.map(r => `<tr>
+          <td><span class="clock-dot out"></span> ${r.name}</td>
+          <td>${r.role}</td>
+          <td>${r.clockOutStr || (r.hasEntries ? '' : '<span style="color:var(--ash)">no entry</span>')}</td>
+          <td>${r.hoursStr}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  if (rows.length === 0) {
+    html = '<div class="mgmt-empty">No staff configured</div>';
+  }
+
+  list.innerHTML = html;
+}
+
+function mgmtForceClockOut(staffId) {
+  const staff = STAFF.find(s => s.id === staffId);
+  if (!staff) return;
+
+  if (typeof clockEntries !== 'undefined') {
+    clockEntries.push({
+      staffId: staff.id,
+      staffName: staff.name,
+      type: 'out',
+      time: new Date(),
+    });
+  }
+
+  renderMgmtClock();
+  showToast(staff.name + ' clocked out');
 }
 
 // ═══════════════════════════════════════════

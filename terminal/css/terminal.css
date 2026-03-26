@@ -1223,6 +1223,29 @@ body {
 .server-tab-row:hover { background: var(--surface); }
 
 /* ════════════════════════════════════════
+   STAFF CLOCK (management)
+   ════════════════════════════════════════ */
+.clock-section-label {
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--ash);
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.clock-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.clock-dot.in { background: var(--green); }
+.clock-dot.out { background: var(--ash); }
+
+/* ════════════════════════════════════════
    BOTTLE SERVICE
    ════════════════════════════════════════ */
 .min-spend-bar {

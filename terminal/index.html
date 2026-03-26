@@ -243,6 +243,7 @@
       <button class="mgmt-nav-btn" data-mgmt="stations" onclick="switchMgmt('stations')">STATIONS</button>
       <button class="mgmt-nav-btn" data-mgmt="reports" onclick="switchMgmt('reports')">REPORTS</button>
       <button class="mgmt-nav-btn" data-mgmt="servers" onclick="switchMgmt('servers')">VIEW SERVERS</button>
+      <button class="mgmt-nav-btn" data-mgmt="clock" onclick="switchMgmt('clock')">STAFF CLOCK</button>
       <button class="mgmt-nav-btn" data-mgmt="checks" onclick="switchMgmt('checks')">CLOSED CHECKS</button>
       <button class="mgmt-nav-btn" data-mgmt="settings" onclick="switchMgmt('settings')">POS SETTINGS</button>
       <button class="mgmt-nav-btn" data-mgmt="dayclose" onclick="switchMgmt('dayclose')">CLOSE DAY</button>
@@ -310,6 +311,14 @@
           <h2 class="mgmt-title">VIEW SERVERS</h2>
         </div>
         <div id="mgmtServersList" class="mgmt-table-wrap"></div>
+      </div>
+
+      <!-- STAFF CLOCK -->
+      <div id="mgmt-clock" class="mgmt-section">
+        <div class="mgmt-header">
+          <h2 class="mgmt-title">STAFF CLOCK</h2>
+        </div>
+        <div id="mgmtClockList" class="mgmt-table-wrap"></div>
       </div>
 
       <!-- CLOSED CHECKS -->
