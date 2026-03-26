@@ -28,7 +28,9 @@ Continuation of S77. Built the local server (Phase 2), wired the terminal to per
 | `20ec585` | Add audit trail API — void/comp/discount logs with stats |
 | `5796d1b` | Add price override, tip gate (35% rule), full audit trail (8 types) |
 | `907a02e` | Add reports API — summary, product mix, employee, hourly, station |
-| `22955a8` | S77 session briefing |
+| `89840c9` | S78 session briefing + agent sweep |
+| `07de280` | Add session-close agent |
+| `3acd2ff` | Remove POS-specific session-close — replaced by universal at ~/ctrl/ |
 
 ## Commits — riddimsupperclub (9 commits)
 
@@ -41,6 +43,7 @@ Continuation of S77. Built the local server (Phase 2), wired the terminal to per
 | `002615e` | Add Audit Trail to BOH portal |
 | `8f18cdc` | Expand BOH audit — discounts, price changes, tip adjustments, 86, reopens |
 | `cce44d3` | Add Reports page to BOH portal — 5 report types |
+| `ba17475` | Add live POS sales to Owner Dashboard KPIs |
 | `ba17475` | Add live POS sales to Owner Dashboard KPIs |
 | `e99e24e` | Fix live POS sales overlay timing |
 
@@ -165,8 +168,9 @@ Revenue MTD and Net Sales KPIs now show live POS data when local server is runni
 
 ## What's Next
 
-> **Resume at commit `907a02e` (riddim-pos) / `e99e24e` (riddimsupperclub) on main.**
+> **Resume at commit `3acd2ff` (riddim-pos) / `e99e24e` (riddimsupperclub) on main.**
 > **Backup tag: `pre-reports-s77`**
+> **Universal session-close agent: `~/ctrl/.claude/agents/session-close.md`**
 
 ### Immediate
 1. **KDS (Phase 4)** — Kitchen/bar display. Data is in local PG, Socket.IO events exist. Need `kds/index.html` + KDS route subscriptions.

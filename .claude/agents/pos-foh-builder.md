@@ -103,12 +103,15 @@ BAR4 (Bar 4, POS 4), BAR5 (SVC, POS 7), LR (Liquor Room, no POS)
 | Recall tabs | Done | Modal listing all open tabs |
 | Fast Bar | Done | Skip tables, go to terminal |
 | Management panel | Done | Menu CRUD, staff PINs, categories, stations, settings, close day |
-| 86 list | TODO | |
-| Edit check (comp/discount/gratuity) | TODO | |
-| Bottle service flow | TODO | |
-| Guest/seat numbers | TODO | |
-| Clock in/out | TODO | |
-| FOH reports | TODO | |
+| 86 list | Done S76 | Toggle items out of stock, greyed in menu, badge in top bar |
+| Edit check (comp/discount/gratuity) | Done S76 | Comp w/ reason, % + flat discount, auto-grat 18-25% |
+| Price override | Done S78 | One-time price change per line, reason required, audit logged |
+| Bottle service flow | Done S76 | Guest count +/-, min spend progress bar from table_minimums |
+| Guest/seat numbers | Done S76 | Seat selector bar (ALL, 1-8), lines tagged per seat |
+| Clock in/out | Done S76 | PIN-based, shift tracking, checkout gate before clock-out |
+| FOH reports | Done S76 | 5 types: summary, product, employee, hourly, station |
+| Server link | Done S78 | Socket.IO + REST to local server, auto-detect, SERVER/OFFLINE badge |
+| Permission gating | Done S78 | hasPermission() checks on all actions, UI hides unauthorized buttons |
 
 ---
 

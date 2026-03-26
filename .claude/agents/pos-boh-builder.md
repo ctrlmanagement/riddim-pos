@@ -22,8 +22,8 @@ riddim-pos/
 │   └── js/                     # core, login, tabs, menu, cart, payment, receipt,
 │                               # tables, eightysix, editcheck, clock, seats,
 │                               # management (router), mgmt-* (6 modules)
-├── kds/                        # Kitchen/bar display (planned)
-├── server/                     # Local Node.js server (planned)
+├── kds/                        # Kitchen/bar display (planned — Phase 4)
+├── server/                     # Local Node.js server ✅ S78 (Express + Socket.IO + PG)
 ├── docs/
 ├── _briefings/
 ├── build.sh                    # CSS concat (no npm)
@@ -63,10 +63,10 @@ events               — event schedule, types, capacity
 ### Top-Level Menu Structure
 | HotSauce Module | RIDDIM BOH Equivalent | Status |
 |---|---|---|
-| **Daily** | Day close summary, daily sales, shift reports | Partial (day close in terminal mgmt) |
-| **Employee** | Staff management, clock records, checkouts, payroll data | Partial (staff PINs + clock in terminal) |
-| **Menu Item** | Menu item CRUD, pricing, categories, modifiers, 86 management | Partial (CRUD in terminal mgmt) |
-| **Business Intelligence** | Analytics dashboard — see sub-modules below | Not started |
+| **Daily** | Day close summary, daily sales, shift reports | ✅ S78 (summary report + day close in terminal) |
+| **Employee** | Staff management, clock records, checkouts, payroll data | ✅ S78 (BOH staff page + employee report + clock API) |
+| **Menu Item** | Menu item CRUD, pricing, categories, modifiers, 86 management | ✅ S78 (BOH products page + product mix report) |
+| **Business Intelligence** | Analytics dashboard — see sub-modules below | ✅ S78 (5 report types in BOH) |
 
 ### Business Intelligence Sub-Modules
 | BI Module | Description | Data Source |
