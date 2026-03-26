@@ -52,6 +52,10 @@
   <div class="top-bar">
     <div class="top-bar-brand">RIDDIM POS</div>
     <div id="topBarStation" class="top-bar-station">Bar 1</div>
+    <div class="top-bar-nav">
+      <button class="top-nav-btn active" id="navTerminal" onclick="switchView('terminal')">TERMINAL</button>
+      <button class="top-nav-btn" id="navManagement" onclick="switchView('management')" style="display:none">MANAGEMENT</button>
+    </div>
     <div id="topBarUser" class="top-bar-user"></div>
     <div id="topBarClock" class="top-bar-clock"></div>
     <button class="top-bar-btn danger" onclick="logout()">LOCK</button>
@@ -99,6 +103,78 @@
     </div>
 
   </div>
+
+  <!-- Management Panel (hidden by default, owner/manager only) -->
+  <div id="managementPanel" class="mgmt-panel" style="display:none">
+    <div class="mgmt-sidebar">
+      <button class="mgmt-nav-btn active" data-mgmt="menu" onclick="switchMgmt('menu')">MENU ITEMS</button>
+      <button class="mgmt-nav-btn" data-mgmt="categories" onclick="switchMgmt('categories')">CATEGORIES</button>
+      <button class="mgmt-nav-btn" data-mgmt="staff" onclick="switchMgmt('staff')">STAFF / PINS</button>
+      <button class="mgmt-nav-btn" data-mgmt="stations" onclick="switchMgmt('stations')">STATIONS</button>
+      <button class="mgmt-nav-btn" data-mgmt="settings" onclick="switchMgmt('settings')">POS SETTINGS</button>
+      <button class="mgmt-nav-btn" data-mgmt="dayclose" onclick="switchMgmt('dayclose')">CLOSE DAY</button>
+    </div>
+    <div class="mgmt-content">
+
+      <!-- MENU ITEMS -->
+      <div id="mgmt-menu" class="mgmt-section active">
+        <div class="mgmt-header">
+          <h2 class="mgmt-title">MENU ITEMS</h2>
+          <button class="mgmt-action-btn" onclick="openAddItemModal()">+ ADD ITEM</button>
+        </div>
+        <div class="mgmt-filter">
+          <select id="mgmtMenuFilter" onchange="renderMgmtMenu()">
+            <option value="all">All Categories</option>
+          </select>
+          <input type="text" id="mgmtMenuSearch" placeholder="Search items..." oninput="renderMgmtMenu()">
+        </div>
+        <div id="mgmtMenuList" class="mgmt-table-wrap"></div>
+      </div>
+
+      <!-- CATEGORIES -->
+      <div id="mgmt-categories" class="mgmt-section">
+        <div class="mgmt-header">
+          <h2 class="mgmt-title">CATEGORIES</h2>
+          <button class="mgmt-action-btn" onclick="openAddCategoryModal()">+ ADD CATEGORY</button>
+        </div>
+        <div id="mgmtCategoryList" class="mgmt-table-wrap"></div>
+      </div>
+
+      <!-- STAFF / PINS -->
+      <div id="mgmt-staff" class="mgmt-section">
+        <div class="mgmt-header">
+          <h2 class="mgmt-title">STAFF / PINS</h2>
+        </div>
+        <div id="mgmtStaffList" class="mgmt-table-wrap"></div>
+      </div>
+
+      <!-- STATIONS -->
+      <div id="mgmt-stations" class="mgmt-section">
+        <div class="mgmt-header">
+          <h2 class="mgmt-title">STATIONS</h2>
+        </div>
+        <div id="mgmtStationList" class="mgmt-table-wrap"></div>
+      </div>
+
+      <!-- POS SETTINGS -->
+      <div id="mgmt-settings" class="mgmt-section">
+        <div class="mgmt-header">
+          <h2 class="mgmt-title">POS SETTINGS</h2>
+        </div>
+        <div id="mgmtSettings" class="mgmt-form"></div>
+      </div>
+
+      <!-- CLOSE DAY -->
+      <div id="mgmt-dayclose" class="mgmt-section">
+        <div class="mgmt-header">
+          <h2 class="mgmt-title">CLOSE DAY</h2>
+        </div>
+        <div id="mgmtDayClose" class="mgmt-form"></div>
+      </div>
+
+    </div>
+  </div>
+
 </div>
 
 <!-- ════════════════════════════════════════
@@ -164,6 +240,112 @@
   </div>
 </div>
 
+<!-- ════════════════════════════════════════
+     EDIT ITEM MODAL
+     ════════════════════════════════════════ -->
+<div id="editItemModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="editItemTitle">ADD ITEM</div>
+      <button class="modal-close" onclick="closeModal('editItemModal')">X</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editItemId">
+      <div class="form-row">
+        <label class="form-label">NAME</label>
+        <input type="text" id="editItemName" class="form-input" placeholder="Item name">
+      </div>
+      <div class="form-row">
+        <label class="form-label">PRICE</label>
+        <input type="number" id="editItemPrice" class="form-input" step="0.01" min="0" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label class="form-label">CATEGORY</label>
+        <select id="editItemCategory" class="form-input"></select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">SPEED RAIL</label>
+        <label class="form-toggle"><input type="checkbox" id="editItemSpeedRail"><span class="toggle-track"></span></label>
+      </div>
+      <div class="form-row">
+        <label class="form-label">SORT ORDER</label>
+        <input type="number" id="editItemSort" class="form-input" min="0" value="0">
+      </div>
+      <div class="form-actions">
+        <button class="mgmt-action-btn danger" id="editItemDeleteBtn" onclick="deleteMenuItem()" style="display:none">DELETE</button>
+        <button class="mgmt-action-btn" onclick="saveMenuItem()">SAVE</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     ADD CATEGORY MODAL
+     ════════════════════════════════════════ -->
+<div id="editCategoryModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="editCatTitle">ADD CATEGORY</div>
+      <button class="modal-close" onclick="closeModal('editCategoryModal')">X</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editCatId">
+      <div class="form-row">
+        <label class="form-label">NAME</label>
+        <input type="text" id="editCatName" class="form-input" placeholder="Category name">
+      </div>
+      <div class="form-row">
+        <label class="form-label">COLOR (optional)</label>
+        <input type="text" id="editCatColor" class="form-input" placeholder="#D4A843">
+      </div>
+      <div class="form-row">
+        <label class="form-label">SORT ORDER</label>
+        <input type="number" id="editCatSort" class="form-input" min="0" value="0">
+      </div>
+      <div class="form-actions">
+        <button class="mgmt-action-btn" onclick="saveCategory()">SAVE</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     EDIT STAFF MODAL
+     ════════════════════════════════════════ -->
+<div id="editStaffModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">EDIT STAFF PIN</div>
+      <button class="modal-close" onclick="closeModal('editStaffModal')">X</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editStaffId">
+      <div class="form-row">
+        <label class="form-label">NAME</label>
+        <div id="editStaffName" class="form-static"></div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">POS PIN (4 digits)</label>
+        <input type="text" id="editStaffPin" class="form-input" maxlength="4" pattern="\d{4}" placeholder="1234">
+      </div>
+      <div class="form-row">
+        <label class="form-label">POS ROLE</label>
+        <select id="editStaffRole" class="form-input">
+          <option value="">-- No POS Access --</option>
+          <option value="owner">Owner</option>
+          <option value="manager">Manager</option>
+          <option value="bartender">Bartender</option>
+          <option value="barback">Barback</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button class="mgmt-action-btn" onclick="saveStaffPin()">SAVE</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="js/app.js"></script>
+<script src="js/management.js"></script>
 </body>
 </html>

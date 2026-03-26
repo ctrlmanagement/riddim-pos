@@ -77,6 +77,7 @@ async function loadCategories() {
       id: c.id,
       name: c.name,
       color: c.color,
+      sortOrder: c.sort_order,
     }));
   }
   if (error) console.error('Categories load error:', error);
@@ -95,6 +96,7 @@ async function loadMenuItems() {
       price: parseFloat(i.price),
       cat: i.category_id,
       speedRail: i.speed_rail,
+      sortOrder: i.sort_order,
       invProductId: i.inv_product_id,
     }));
   }
@@ -229,6 +231,7 @@ function enterTerminal() {
   showScreen('main');
   document.getElementById('topBarUser').textContent = currentUser.name;
   document.getElementById('topBarStation').textContent = STATION.label;
+  updateManagementAccess();
 
   // Set first category as active
   if (MENU_CATEGORIES.length > 0 && !activeCategory) {
