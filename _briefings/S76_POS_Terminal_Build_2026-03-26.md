@@ -127,10 +127,44 @@ Evaluated whether Astro (or React/Vue) would benefit the terminal UI given 10-15
 
 ---
 
+## File Reorganization (completed end of session)
+
+Refactored from 4 JS files + 1 CSS file into 19 JS modules + 19 CSS partials:
+
+```
+shared/css/          4 files — tokens, modals, forms, buttons (reusable for KDS/display)
+terminal/css/       15 files — 14 domain partials + @import manifest
+terminal/js/        19 files — core → login → tabs → menu → cart → payment → receipt
+                               → tables → eightysix → editcheck → clock → seats
+                               → management (router) → mgmt-menu → mgmt-categories
+                               → mgmt-staff → mgmt-config → mgmt-reports → mgmt-operations
+terminal/index.html  1 file  — stays monolithic (689 lines)
+build.sh                     — CSS concat for production (no npm)
+```
+
+- CSS uses `@import` for dev (zero build step), `build.sh` concat for prod
+- JS load order: core.js first (all globals), then domain modules, typeof guards for optional features
+- Screen/ directory gitignored (local reference only)
+
+---
+
+## Agents (4 total)
+
+| Agent | File | Purpose |
+|---|---|---|
+| POS FOH Builder | `.claude/agents/pos-foh-builder.md` | Terminal feature builder — full stack context, 10 build rules |
+| FOH Code Reviewer | `.claude/agents/foh-code-reviewer.md` | 7-category review checklist for terminal code |
+| RIDDIM Design | `.claude/agents/riddim-design.md` | Complete RIDDIM design system spec |
+| POS BOH Builder | `.claude/agents/pos-boh-builder.md` | Back-office BI, reports, audit trail, P&L integration |
+
+---
+
 ## What's Next
 
-1. **File organization refactor** — split monolithic HTML into partials/components, formalize JS module boundaries, prepare multi-device entry points (terminal, kds, display)
-2. **Local server** (Phase 2) — Node.js + Express + Socket.IO + local PostgreSQL. Order engine, multi-terminal sync, offline persistence
+> **Resume at commit `4216c40` on main.**
+
+1. **Local server** (Phase 2) — Node.js + Express + Socket.IO + local PostgreSQL. Order engine, multi-terminal sync, offline persistence
+2. **BOH / Back Office** — Audit trail, transaction history, sales reports, employee reports, menu analytics, operating dashboard (use BOH builder agent)
 3. **KDS** (Phase 4) — Kitchen/bar display system, item routing by category
 4. **Stripe Terminal integration** (Phase 3) — card reader on Sunmi T3, PaymentIntent flow
 5. **Supabase sync** (Phase 5) — local PG ↔ Supabase bidirectional for orders, P&L
@@ -140,7 +174,8 @@ Evaluated whether Astro (or React/Vue) would benefit the terminal UI given 10-15
 
 ## Reference Material
 
-- **Hot Door screenshots:** `Screen/` directory (27 PNGs from current HotSauce POS)
+- **Hot Door FOH screenshots:** `Screen/` directory (27 PNGs from current HotSauce POS)
+- **Hot Door BOH screenshots:** `Screen/boh/` directory (HotSauce BackOffice v7.3.1)
 - **Hot Door checkout PDF:** `Screen/check out.pdf` (2-page Daily Checkout template)
 - **Research briefs:** `~/ctrl/riddimsupperclub/_briefings/pos-system/` (5 architecture briefs)
 - **RIDDIM staff portal floor plan:** `~/ctrl/riddimsupperclub/docs/staff/index.html` (line 208-259, SVG source)
