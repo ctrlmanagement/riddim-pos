@@ -1,0 +1,16 @@
+{
+  "name": "riddim-pos-server",
+  "version": "1.0.0",
+  "description": "RIDDIM POS local server — order engine, Socket.IO hub, static serving",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.0",
+    "express": "^4.21.0",
+    "pg": "^8.13.0",
+    "socket.io": "^4.8.0"
+  }
+}
