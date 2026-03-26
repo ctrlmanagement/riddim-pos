@@ -54,10 +54,10 @@ function switchMgmt(section) {
   if (section === 'dayclose') renderMgmtDayClose();
 }
 
-// Show management nav for owner/manager roles
+// Show management nav based on permissions
 function updateManagementAccess() {
   const navBtn = document.getElementById('navManagement');
-  if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'manager')) {
+  if (currentUser && hasPermission('mgmt.access')) {
     navBtn.style.display = '';
   } else {
     navBtn.style.display = 'none';

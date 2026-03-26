@@ -47,8 +47,8 @@ function ecSaveTabName() {
 
 // Comp Item
 function ecComp() {
-  if (CONFIG.require_manager_comp && currentUser.role !== 'manager' && currentUser.role !== 'owner') {
-    showToast('Manager PIN required to comp items');
+  if (!hasPermission('order.comp')) {
+    showToast('No permission to comp items');
     return;
   }
   const tab = getActiveTab();
@@ -125,8 +125,8 @@ function ecDoComp() {
 
 // Discount
 function ecDiscount() {
-  if (CONFIG.require_manager_discount && currentUser.role !== 'manager' && currentUser.role !== 'owner') {
-    showToast('Manager PIN required to apply discount');
+  if (!hasPermission('order.discount')) {
+    showToast('No permission to apply discount');
     return;
   }
   const tab = getActiveTab();

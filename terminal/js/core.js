@@ -48,7 +48,7 @@ async function loadConfig() {
 async function loadStaff() {
   const { data, error } = await sb
     .from('staff')
-    .select('id, first_name, last_name, phone, role, pos_pin, pos_role, active')
+    .select('id, first_name, last_name, phone, role, pos_pin, pos_role, security_group_id, active')
     .eq('active', true)
     .not('pos_pin', 'is', null);
   if (data) {
@@ -58,9 +58,29 @@ async function loadStaff() {
       fullName: s.first_name + ' ' + (s.last_name || ''),
       pin: s.pos_pin,
       role: s.pos_role || 'bartender',
+      securityGroupId: s.security_group_id || null,
+      permissions: new Set(), // populated at login
     }));
   }
   if (error) console.error('Staff load error:', error);
+}
+
+// Load permissions for a specific security group
+async function loadPermissions(groupId) {
+  if (!groupId) return new Set();
+  const { data, error } = await sb
+    .from('pos_security_permissions')
+    .select('permission')
+    .eq('group_id', groupId)
+    .eq('enabled', true);
+  if (error) { console.error('Permissions load error:', error); return new Set(); }
+  return new Set((data || []).map(p => p.permission));
+}
+
+// Permission check — used by all terminal modules
+function hasPermission(key) {
+  if (!currentUser) return false;
+  return currentUser.permissions.has(key);
 }
 
 async function loadCategories() {

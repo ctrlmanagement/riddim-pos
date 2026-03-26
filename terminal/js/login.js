@@ -57,9 +57,15 @@ function updatePinDots() {
   });
 }
 
-function attemptLogin() {
+async function attemptLogin() {
   const user = STAFF.find(s => s.pin === pinBuffer);
   if (user) {
+    // Load permissions from security group
+    if (user.securityGroupId) {
+      user.permissions = await loadPermissions(user.securityGroupId);
+    } else {
+      user.permissions = new Set();
+    }
     currentUser = user;
     document.getElementById('loginError').textContent = '';
     enterTerminal();
@@ -72,6 +78,7 @@ function attemptLogin() {
   }
 }
 
+
 // ═══════════════════════════════════════════
 // TERMINAL — Main Screen
 // ═══════════════════════════════════════════
@@ -81,6 +88,7 @@ function enterTerminal() {
   document.getElementById('topBarUser').textContent = currentUser.name;
   document.getElementById('topBarStation').textContent = STATION.label;
   updateManagementAccess();
+  applyPermissionUI();
 
   // Set first category as active
   if (MENU_CATEGORIES.length > 0 && !activeCategory) {
@@ -96,6 +104,47 @@ function enterTerminal() {
   // Load table data and show tables view by default
   loadTableData().then(() => {
     switchView('tables');
+  });
+}
+
+// Hide/show UI elements based on permissions
+function applyPermissionUI() {
+  // Void button
+  const voidBtn = document.getElementById('btnVoid');
+  if (voidBtn) voidBtn.style.display = hasPermission('order.void_tab') ? '' : 'none';
+
+  // Edit check button (comp/discount/gratuity)
+  const editBtn = document.getElementById('btnEditCheck');
+  if (editBtn) editBtn.style.display = (hasPermission('order.comp') || hasPermission('order.discount') || hasPermission('tab.set_gratuity') || hasPermission('tab.edit_name')) ? '' : 'none';
+
+  // 86 badge/button
+  const eightySixBtn = document.getElementById('btn86');
+  if (eightySixBtn) eightySixBtn.style.display = hasPermission('floor.86_toggle') ? '' : 'none';
+
+  // Pay button
+  const payBtn = document.getElementById('btnPay');
+  if (payBtn) payBtn.style.display = hasPermission('tab.close') ? '' : 'none';
+
+  // Tables nav
+  const navTables = document.getElementById('navTables');
+  if (navTables) navTables.style.display = hasPermission('floor.view_all_tables') ? '' : 'none';
+
+  // Management sub-sections gating
+  const mgmtSections = {
+    'menu': 'mgmt.edit_menu',
+    'categories': 'mgmt.edit_menu',
+    'staff': 'mgmt.edit_config',
+    'stations': 'mgmt.edit_config',
+    'reports': 'mgmt.view_sales',
+    'servers': 'mgmt.view_servers',
+    'clock': 'clock.view_others',
+    'checks': 'pay.change_tip',
+    'settings': 'mgmt.edit_config',
+    'dayclose': 'mgmt.close_day',
+  };
+  Object.entries(mgmtSections).forEach(([section, perm]) => {
+    const btn = document.querySelector(`.mgmt-nav-btn[data-mgmt="${section}"]`);
+    if (btn) btn.style.display = hasPermission(perm) ? '' : 'none';
   });
 }
 

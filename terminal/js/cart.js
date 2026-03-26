@@ -56,9 +56,9 @@ function removeLine(lineId) {
     renderCart();
     renderTabs();
   } else {
-    // Already sent — needs void with reason
-    if (CONFIG.require_manager_void && currentUser.role !== 'manager' && currentUser.role !== 'owner') {
-      showToast('Manager PIN required to void sent items');
+    // Already sent — needs void permission
+    if (!hasPermission('order.void_line')) {
+      showToast('No permission to void sent items');
       return;
     }
     openVoidReasonModal('line', lineId);
@@ -324,8 +324,8 @@ function voidTab() {
   const tab = getActiveTab();
   if (!tab) return;
 
-  if (CONFIG.require_manager_void && currentUser.role !== 'manager' && currentUser.role !== 'owner') {
-    showToast('Manager PIN required to void tab');
+  if (!hasPermission('order.void_tab')) {
+    showToast('No permission to void tab');
     return;
   }
 
