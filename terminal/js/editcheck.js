@@ -182,6 +182,14 @@ function ecApplyDiscount(pct) {
   renderCart();
   renderTabs();
   showToast((pct * 100).toFixed(0) + '% discount applied');
+
+  // Audit log
+  if (typeof serverAuditLog === 'function') {
+    serverAuditLog('discount', {
+      order_id: tab.serverId, tab_name: tab.name, station_code: STATION.code,
+      discount_pct: pct, amount: (tabSubtotal(tab) * pct).toFixed(2),
+    });
+  }
 }
 
 function ecApplyFlatDiscount() {
@@ -203,6 +211,14 @@ function ecApplyFlatDiscount() {
   renderCart();
   renderTabs();
   showToast('$' + amount.toFixed(2) + ' discount applied');
+
+  // Audit log
+  if (typeof serverAuditLog === 'function') {
+    serverAuditLog('discount', {
+      order_id: tab.serverId, tab_name: tab.name, station_code: STATION.code,
+      discount_flat: amount, amount: amount.toFixed(2),
+    });
+  }
 }
 
 function ecRemoveDiscount() {
@@ -255,4 +271,86 @@ function ecRemoveGrat() {
   closeModal('editCheckModal');
   renderCart();
   showToast('Auto-gratuity removed');
+}
+
+// ═══════════════════════════════════════════
+// PRICE OVERRIDE (one-time, per line)
+// ═══════════════════════════════════════════
+
+function ecPriceOverride() {
+  if (!hasPermission('order.modify')) {
+    showToast('No permission to modify prices');
+    return;
+  }
+  const tab = getActiveTab();
+  if (!tab) return;
+
+  const editableLines = tab.lines.filter(l => !l.voided && !l.comped);
+  if (editableLines.length === 0) {
+    document.getElementById('ecPanel').innerHTML = '<div class="ec-empty">No items to edit</div>';
+    return;
+  }
+
+  document.getElementById('ecPanel').innerHTML = `
+    <div class="ec-form">
+      <div class="ec-subtitle">SELECT ITEM TO CHANGE PRICE</div>
+      ${editableLines.map(l => `
+        <div class="ec-line-row" onclick="ecSelectPriceItem('${l.id}')">
+          <span>${l.qty}x ${l.name}</span>
+          <span>$${(l.price * l.qty).toFixed(2)}</span>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+function ecSelectPriceItem(lineId) {
+  const tab = getActiveTab();
+  const line = tab ? tab.lines.find(l => l.id === lineId) : null;
+  if (!line) return;
+
+  document.getElementById('ecPanel').innerHTML = `
+    <div class="ec-form">
+      <div class="ec-subtitle">CHANGE PRICE — ${line.name}</div>
+      <div class="form-row" style="margin-bottom:8px">
+        <label class="form-label">CURRENT: $${line.price.toFixed(2)}</label>
+      </div>
+      <div class="form-row">
+        <label class="form-label">NEW PRICE</label>
+        <input type="number" id="ecNewPrice" class="form-input" min="0" step="0.01" value="${line.price.toFixed(2)}" style="width:120px">
+      </div>
+      <div class="form-row">
+        <label class="form-label">REASON</label>
+        <input type="text" id="ecPriceReason" class="form-input" placeholder="Why is the price changing?">
+      </div>
+      <div class="form-actions" style="margin-top:8px">
+        <button class="mgmt-action-btn" onclick="ecPriceOverride()" style="background:var(--surface);color:var(--ivory-dim);border-color:var(--surface-active)">BACK</button>
+        <button class="mgmt-action-btn" onclick="ecApplyPriceOverride('${lineId}')">APPLY</button>
+      </div>
+    </div>`;
+  setTimeout(() => document.getElementById('ecNewPrice').focus(), 100);
+}
+
+function ecApplyPriceOverride(lineId) {
+  const tab = getActiveTab();
+  if (!tab) return;
+  const line = tab.lines.find(l => l.id === lineId);
+  if (!line) return;
+
+  const newPrice = parseFloat(document.getElementById('ecNewPrice').value);
+  const reason = document.getElementById('ecPriceReason').value.trim();
+  if (isNaN(newPrice) || newPrice < 0) { showToast('Invalid price'); return; }
+  if (!reason) { showToast('Reason required for price change'); return; }
+
+  const oldPrice = line.price;
+  line.originalPrice = line.originalPrice || oldPrice;
+  line.price = newPrice;
+  line.priceOverride = true;
+
+  closeModal('editCheckModal');
+  renderCart();
+  renderTabs();
+  showToast(line.name + ': $' + oldPrice.toFixed(2) + ' → $' + newPrice.toFixed(2));
+
+  // Persist to server
+  if (typeof serverPriceOverride === 'function') serverPriceOverride(tab, line, newPrice, reason);
 }

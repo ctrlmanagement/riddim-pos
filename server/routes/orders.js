@@ -223,6 +223,79 @@ router.post('/:id/hold', async (req, res) => {
   }
 });
 
+// ── PRICE OVERRIDE ──────────────────────────────────────────
+router.post('/:id/lines/:lineId/price', async (req, res) => {
+  try {
+    const { id, lineId } = req.params;
+    const { new_price, staff_id, staff_name, reason } = req.body;
+
+    // Get original price
+    const { rows: [line] } = await pool.query(
+      'SELECT price, original_price, name FROM pos_order_lines WHERE id = $1 AND order_id = $2',
+      [lineId, id]
+    );
+    if (!line) return res.status(404).json({ error: 'Line not found' });
+
+    const origPrice = line.original_price || line.price;
+
+    await pool.query(
+      `UPDATE pos_order_lines SET original_price = $1, price = $2 WHERE id = $3`,
+      [origPrice, new_price, lineId]
+    );
+
+    // Log to audit
+    await pool.query(
+      `INSERT INTO pos_audit_log (audit_type, order_id, line_id, staff_id, staff_name, detail, reason)
+       VALUES ('price_override', $1, $2, $3, $4, $5, $6)`,
+      [id, lineId, staff_id, staff_name,
+       JSON.stringify({ item_name: line.name, original_price: parseFloat(origPrice), new_price: parseFloat(new_price) }),
+       reason]
+    );
+
+    await recalcOrder(id);
+    const order = await getOrderWithLines(id);
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── TIP ADJUSTMENT ──────────────────────────────────────────
+router.post('/:id/tip', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { new_tip, staff_id, staff_name } = req.body;
+
+    // Get current payment
+    const { rows: payments } = await pool.query(
+      'SELECT * FROM pos_payments WHERE order_id = $1 ORDER BY processed_at DESC LIMIT 1',
+      [id]
+    );
+    if (!payments.length) return res.status(404).json({ error: 'No payment found' });
+
+    const payment = payments[0];
+    const oldTip = parseFloat(payment.tip_amount);
+
+    await pool.query(
+      'UPDATE pos_payments SET tip_amount = $1 WHERE id = $2',
+      [new_tip, payment.id]
+    );
+
+    // Log to audit
+    await pool.query(
+      `INSERT INTO pos_audit_log (audit_type, order_id, staff_id, staff_name, detail)
+       VALUES ('tip_adjust', $1, $2, $3, $4)`,
+      [id, staff_id, staff_name,
+       JSON.stringify({ tip_before: oldTip, tip_after: parseFloat(new_tip), sale_num: payment.sale_num })]
+    );
+
+    const order = await getOrderWithLines(id);
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── HELPERS ─────────────────────────────────────────────────
 async function recalcOrder(orderId) {
   const { rows: lines } = await pool.query(

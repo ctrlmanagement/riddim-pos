@@ -265,6 +265,40 @@ async function serverClockOut(staffId, forcedBy) {
   return result;
 }
 
+// ── PRICE OVERRIDE ──────────────────────────────────────────
+async function serverPriceOverride(tab, line, newPrice, reason) {
+  if (!tab.serverId || !line.serverLineId) return null;
+  return await serverPost(`/api/orders/${tab.serverId}/lines/${line.serverLineId}/price`, {
+    new_price: newPrice,
+    staff_id: currentUser.id,
+    staff_name: currentUser.name,
+    reason,
+  });
+}
+
+// ── TIP ADJUSTMENT ──────────────────────────────────────────
+async function serverTipAdjust(tab, newTip) {
+  if (!tab.serverId) return null;
+  return await serverPost(`/api/orders/${tab.serverId}/tip`, {
+    new_tip: newTip,
+    staff_id: currentUser.id,
+    staff_name: currentUser.name,
+  });
+}
+
+// ── AUDIT LOG (generic) ─────────────────────────────────────
+async function serverAuditLog(type, detail, reason) {
+  return await serverPost('/api/audit', {
+    audit_type: type,
+    order_id: detail.order_id || null,
+    line_id: detail.line_id || null,
+    staff_id: currentUser.id,
+    staff_name: currentUser.name,
+    detail,
+    reason,
+  });
+}
+
 // ── 86 BROADCAST ────────────────────────────────────────────
 function server86Toggle(itemId, is86) {
   if (socket) socket.emit('86:toggle', { itemId, is86 });

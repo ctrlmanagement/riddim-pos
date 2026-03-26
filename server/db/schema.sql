@@ -120,6 +120,22 @@ CREATE TABLE IF NOT EXISTS pos_sessions (
     created_at      timestamptz DEFAULT now()
 );
 
+-- Audit log (discount, price override, tip adjust, 86 toggle, tab reopen, manager override)
+CREATE TABLE IF NOT EXISTS pos_audit_log (
+    id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    audit_type      text NOT NULL,       -- discount, price_override, tip_adjust, 86_toggle, tab_reopen, manager_override
+    order_id        uuid,
+    line_id         uuid,
+    staff_id        uuid NOT NULL,
+    staff_name      text NOT NULL,
+    detail          jsonb DEFAULT '{}',  -- flexible: {original_price, new_price}, {tip_before, tip_after}, etc.
+    reason          text,
+    created_at      timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_audit_type ON pos_audit_log(audit_type);
+CREATE INDEX idx_audit_date ON pos_audit_log(created_at);
+
 -- KDS routing rules (which categories go to which display)
 CREATE TABLE IF NOT EXISTS pos_kds_routes (
     id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,

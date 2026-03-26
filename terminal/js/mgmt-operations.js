@@ -270,9 +270,18 @@ function submitChangeTip(tabId) {
   const amount = parseFloat(document.getElementById('changeTipAmount').value);
   if (isNaN(amount) || amount < 0) { showToast('Invalid tip amount'); return; }
 
-  tab.tipAmount = amount;
   const sub = tabSubtotal(tab) - tabDiscountAmount(tab);
-  tab.tipPct = sub > 0 ? amount / sub : 0;
+  const tipPct = sub > 0 ? amount / sub : 0;
+
+  // Gate: tip over 35% of base requires manager/owner
+  if (tipPct > 0.35 && !hasPermission('pay.change_tip')) {
+    showToast('Tip over 35% requires manager approval');
+    return;
+  }
+
+  const oldTip = tab.tipAmount || 0;
+  tab.tipAmount = amount;
+  tab.tipPct = tipPct;
 
   closeModal('editCheckModal');
   // Restore edit check modal state
@@ -281,6 +290,9 @@ function submitChangeTip(tabId) {
 
   renderMgmtChecks();
   showToast('Tip updated to $' + amount.toFixed(2));
+
+  // Persist + audit
+  if (typeof serverTipAdjust === 'function') serverTipAdjust(tab, amount);
 }
 
 function reopenCheck(tabId) {
@@ -304,6 +316,13 @@ function reopenCheck(tabId) {
   renderCart();
   switchView('terminal');
   showToast(tab.name + ' reopened');
+
+  // Audit log
+  if (typeof serverAuditLog === 'function') {
+    serverAuditLog('tab_reopen', {
+      order_id: tab.serverId, tab_name: tab.name, order_num: tab.orderNum, station_code: STATION.code,
+    });
+  }
 }
 
 // ═══════════════════════════════════════════

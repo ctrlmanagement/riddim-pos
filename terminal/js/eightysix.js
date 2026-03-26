@@ -44,7 +44,8 @@ function render86List() {
 }
 
 function toggle86(itemId) {
-  if (eightySixSet.has(itemId)) {
+  const was86 = eightySixSet.has(itemId);
+  if (was86) {
     eightySixSet.delete(itemId);
   } else {
     eightySixSet.add(itemId);
@@ -52,6 +53,17 @@ function toggle86(itemId) {
   render86List();
   update86Badge();
   renderMenu(); // refresh menu grid to grey out 86'd items
+
+  // Broadcast + audit
+  if (typeof server86Toggle === 'function') server86Toggle(itemId, !was86);
+  const item = MENU_ITEMS.find(i => i.id === itemId);
+  if (typeof serverAuditLog === 'function') {
+    serverAuditLog('86_toggle', {
+      item_name: item ? item.name : itemId,
+      is_86: !was86,
+      station_code: STATION.code,
+    });
+  }
 }
 
 function update86Badge() {

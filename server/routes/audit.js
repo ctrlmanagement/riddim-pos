@@ -68,6 +68,24 @@ router.get('/', async (req, res) => {
         o.opened_at as order_date
       FROM pos_orders o
       WHERE o.state = 'voided' AND o.voided_at IS NOT NULL
+
+      UNION ALL
+
+      SELECT
+        a.id,
+        a.audit_type,
+        COALESCE(a.detail->>'item_name', a.audit_type) as item_name,
+        COALESCE((a.detail->>'amount')::numeric, 0) as price,
+        1 as qty,
+        a.reason,
+        a.staff_id as action_by,
+        a.created_at as action_at,
+        COALESCE((a.detail->>'order_num')::integer, 0) as order_num,
+        a.detail->>'tab_name' as tab_name,
+        a.staff_name as server_name,
+        a.detail->>'station_code' as station_code,
+        a.created_at as order_date
+      FROM pos_audit_log a
     `;
 
     // Wrap in outer query for filtering and sorting
@@ -128,11 +146,40 @@ router.get('/stats', async (req, res) => {
        FROM pos_orders WHERE state = 'voided' ${dateFilterOrder}`, params
     );
 
+    const discounts = await pool.query(
+      `SELECT COUNT(*) as count, COALESCE(SUM((detail->>'amount')::numeric), 0) as total
+       FROM pos_audit_log WHERE audit_type = 'discount'` + (date ? ` AND created_at::date = $1` : ''), params
+    );
+    const priceOverrides = await pool.query(
+      `SELECT COUNT(*) as count FROM pos_audit_log WHERE audit_type = 'price_override'` + (date ? ` AND created_at::date = $1` : ''), params
+    );
+    const tipAdjusts = await pool.query(
+      `SELECT COUNT(*) as count FROM pos_audit_log WHERE audit_type = 'tip_adjust'` + (date ? ` AND created_at::date = $1` : ''), params
+    );
+
     res.json({
       voids: { count: parseInt(voids.rows[0].count), total: parseFloat(voids.rows[0].total) },
       comps: { count: parseInt(comps.rows[0].count), total: parseFloat(comps.rows[0].total) },
       tab_voids: { count: parseInt(tabVoids.rows[0].count), total: parseFloat(tabVoids.rows[0].total) },
+      discounts: { count: parseInt(discounts.rows[0].count), total: parseFloat(discounts.rows[0].total) },
+      price_overrides: { count: parseInt(priceOverrides.rows[0].count) },
+      tip_adjusts: { count: parseInt(tipAdjusts.rows[0].count) },
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── LOG an audit entry ───────────────────────────────────────
+router.post('/', async (req, res) => {
+  try {
+    const { audit_type, order_id, line_id, staff_id, staff_name, detail, reason } = req.body;
+    const { rows } = await pool.query(
+      `INSERT INTO pos_audit_log (audit_type, order_id, line_id, staff_id, staff_name, detail, reason)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [audit_type, order_id || null, line_id || null, staff_id, staff_name, detail || {}, reason || null]
+    );
+    res.status(201).json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
