@@ -510,6 +510,20 @@ async function tableClick(tableNum) {
     return;
   }
 
+  // Check for a recently closed tab on this table (with booking) — suggest reopen
+  const closedWithBooking = tabs.find(t =>
+    t.tableNum === tableNum && t.status === 'closed' && t.bookingId
+  );
+  if (closedWithBooking) {
+    const reopen = confirm(`Table ${tableNum} has a closed check with a booking deposit. Reopen it instead of creating a new tab?`);
+    if (reopen) {
+      if (typeof reopenCheck === 'function') {
+        await reopenCheck(closedWithBooking.id);
+      }
+      return;
+    }
+  }
+
   // If there's a confirmed reservation, seat via reservation flow
   if (tableReservations[tableNum]) {
     await seatFromReservation(tableNum);

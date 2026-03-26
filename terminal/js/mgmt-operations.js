@@ -299,14 +299,18 @@ async function reopenCheck(tabId) {
   const tab = tabs.find(t => t.id === tabId);
   if (!tab) return;
 
-  // Permission gate: tab.reopen permission required + owner-only for deposit checks
-  if (!hasPermission('tab.reopen')) {
+  // Permission gate: live check from Supabase (not cached)
+  const perms = currentUser.securityGroupId
+    ? await loadPermissions(currentUser.securityGroupId)
+    : new Set();
+
+  if (!perms.has('tab.reopen')) {
     showToast('No permission to reopen checks');
     return;
   }
 
   const isOwner = currentUser && currentUser.role === 'owner';
-  const hasDeposit = tab.depositAmount > 0 || tab.bookingId;
+  const hasDeposit = (tab.depositAmount && tab.depositAmount > 0) || tab.bookingId;
 
   if (hasDeposit && !isOwner) {
     showToast('Owner authorization required — check has a booking deposit');
