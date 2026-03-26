@@ -197,7 +197,7 @@ async function applyBookingToTab(tab, bookingId) {
 
   const { data: booking, error } = await sb
     .from('table_bookings')
-    .select('id, guest_name, guest_phone, party_size, minimum_spend_required, deposit_amount, deposit_paid, member_id, section_name, notes')
+    .select('id, guest_name, guest_phone, party_size, minimum_spend_required, deposit_amount, deposit_paid, member_id, section_name, notes, event_id')
     .eq('id', bookingId)
     .single();
 
@@ -207,6 +207,16 @@ async function applyBookingToTab(tab, bookingId) {
   }
 
   tab.bookingId = booking.id;
+
+  // Fetch event name (query separately — constraint #2)
+  if (booking.event_id && !tab.eventName) {
+    const { data: event } = await sb
+      .from('events')
+      .select('title')
+      .eq('id', booking.event_id)
+      .single();
+    if (event) tab.eventName = event.title;
+  }
 
   // Transfer min spend from booking
   if (booking.minimum_spend_required) {
@@ -465,6 +475,11 @@ async function seatFromReservation(tableNum) {
 
   // Move from reservations to sessions in local state
   delete tableReservations[tableNum];
+
+  // Store event name for cart display
+  if (booking._event && booking._event.title) {
+    tab.eventName = booking._event.title;
+  }
 
   // If member booking, load member details
   if (booking.member_id) {

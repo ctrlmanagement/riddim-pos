@@ -208,8 +208,17 @@ function renderCart() {
   typeEl.textContent = tab.type.toUpperCase() + ' TAB';
   if (editBtn) editBtn.style.display = '';
 
-  // Member badge + Bottle service: guest count + min spend bar (injected above cart items)
+  // Booking info block — shows reservation context for staff
   let cartExtras = '';
+  if (tab.bookingId || tab.depositAmount || tab.eventName) {
+    cartExtras += '<div style="padding:8px 10px;background:rgba(212,168,67,0.06);border:1px solid rgba(212,168,67,0.15);border-radius:6px;margin-bottom:6px;font-size:12px;">';
+    if (tab.eventName) cartExtras += `<div style="font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:1px;color:#D4A843;margin-bottom:2px;">${tab.eventName}</div>`;
+    if (tab.guestName) cartExtras += `<div style="color:#F5F0E8;">${tab.guestName}${tab.memberName && tab.memberName !== tab.guestName ? ' — ' + tab.memberName : ''}</div>`;
+    if (tab.depositAmount && tab.depositAmount > 0) cartExtras += `<div style="color:#27AE60;font-family:\'Bebas Neue\',sans-serif;letter-spacing:1px;">DEPOSIT: $${tab.depositAmount.toFixed(2)}</div>`;
+    cartExtras += '</div>';
+  }
+
+  // Member badge + Bottle service: guest count + min spend bar
   if (typeof renderMemberBadge === 'function') cartExtras += renderMemberBadge(tab);
   if (typeof renderGuestCountBar === 'function') cartExtras += renderGuestCountBar(tab);
   if (typeof renderMinSpendBar === 'function') cartExtras += renderMinSpendBar(tab);
