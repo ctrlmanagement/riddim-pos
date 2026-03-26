@@ -49,6 +49,9 @@ function switchMgmt(section) {
   if (section === 'categories') renderMgmtCategories();
   if (section === 'staff') renderMgmtStaff();
   if (section === 'stations') renderMgmtStations();
+  if (section === 'reports') renderReport('summary');
+  if (section === 'servers') renderMgmtServers();
+  if (section === 'checks') renderMgmtChecks();
   if (section === 'settings') renderMgmtSettings();
   if (section === 'dayclose') renderMgmtDayClose();
 }
@@ -553,4 +556,431 @@ async function closeDay() {
   switchView('terminal');
   renderTabs();
   renderCart();
+}
+
+// ═══════════════════════════════════════════
+// FOH REPORTS
+// ═══════════════════════════════════════════
+
+function switchReport(type) {
+  document.querySelectorAll('.rpt-tab').forEach(t => t.classList.remove('active'));
+  const btn = document.querySelector(`.rpt-tab[data-rpt="${type}"]`);
+  if (btn) btn.classList.add('active');
+  renderReport(type);
+}
+
+function getClosedTabs() {
+  return tabs.filter(t => t.status === 'closed' || t.status === 'paid');
+}
+
+function renderReport(type) {
+  const el = document.getElementById('rptContent');
+  if (!el) return;
+
+  if (type === 'summary') renderReportSummary(el);
+  else if (type === 'product') renderReportProduct(el);
+  else if (type === 'employee') renderReportEmployee(el);
+  else if (type === 'hourly') renderReportHourly(el);
+  else if (type === 'station') renderReportStation(el);
+}
+
+function renderReportSummary(el) {
+  const closed = getClosedTabs();
+  const voided = tabs.filter(t => t.status === 'voided');
+  const open = tabs.filter(t => t.status === 'open' || t.status === 'sent');
+
+  let gross = 0, discounts = 0, comps = 0, tax = 0, tips = 0;
+  let cardCount = 0, cashCount = 0, compCount = 0;
+
+  closed.forEach(t => {
+    const sub = tabSubtotal(t);
+    const disc = tabDiscountAmount(t);
+    const compAmt = t.lines.filter(l => l.comped).reduce((s, l) => s + l.price * l.qty, 0);
+    gross += sub;
+    discounts += disc;
+    comps += compAmt;
+    tax += tabTax(t);
+    tips += t.tipAmount || 0;
+    if (t.payMethod === 'card') cardCount++;
+    else if (t.payMethod === 'cash') cashCount++;
+    else if (t.payMethod === 'comp') compCount++;
+  });
+
+  const net = gross - discounts - comps;
+  const avgCheck = closed.length > 0 ? (net + tax) / closed.length : 0;
+
+  el.innerHTML = `
+    <div class="rpt-grid">
+      <div class="rpt-card">
+        <div class="rpt-card-val">$${gross.toFixed(2)}</div>
+        <div class="rpt-card-lbl">GROSS SALES</div>
+      </div>
+      <div class="rpt-card">
+        <div class="rpt-card-val">$${net.toFixed(2)}</div>
+        <div class="rpt-card-lbl">NET SALES</div>
+      </div>
+      <div class="rpt-card">
+        <div class="rpt-card-val">$${tax.toFixed(2)}</div>
+        <div class="rpt-card-lbl">TAX</div>
+      </div>
+      <div class="rpt-card">
+        <div class="rpt-card-val">$${tips.toFixed(2)}</div>
+        <div class="rpt-card-lbl">TIPS</div>
+      </div>
+      <div class="rpt-card">
+        <div class="rpt-card-val">${closed.length}</div>
+        <div class="rpt-card-lbl">CHECKS CLOSED</div>
+      </div>
+      <div class="rpt-card">
+        <div class="rpt-card-val">$${avgCheck.toFixed(2)}</div>
+        <div class="rpt-card-lbl">AVG CHECK</div>
+      </div>
+      <div class="rpt-card">
+        <div class="rpt-card-val">$${discounts.toFixed(2)}</div>
+        <div class="rpt-card-lbl">DISCOUNTS</div>
+      </div>
+      <div class="rpt-card">
+        <div class="rpt-card-val">$${comps.toFixed(2)}</div>
+        <div class="rpt-card-lbl">COMPS</div>
+      </div>
+      <div class="rpt-card">
+        <div class="rpt-card-val">${voided.length}</div>
+        <div class="rpt-card-lbl">VOIDED</div>
+      </div>
+    </div>
+    <div class="rpt-section">
+      <div class="rpt-row"><span>CARD</span><span>${cardCount} checks</span></div>
+      <div class="rpt-row"><span>CASH</span><span>${cashCount} checks</span></div>
+      <div class="rpt-row"><span>COMP</span><span>${compCount} checks</span></div>
+      <div class="rpt-row"><span>OPEN</span><span class="${open.length ? 'text-red' : ''}">${open.length} tabs</span></div>
+    </div>
+  `;
+}
+
+function renderReportProduct(el) {
+  const closed = getClosedTabs();
+  const itemTotals = {};
+
+  closed.forEach(t => {
+    t.lines.forEach(l => {
+      if (l.voided) return;
+      const key = l.menuItemId || l.name;
+      if (!itemTotals[key]) {
+        itemTotals[key] = { name: l.name, qty: 0, revenue: 0 };
+      }
+      itemTotals[key].qty += l.qty;
+      if (!l.comped) itemTotals[key].revenue += l.price * l.qty;
+    });
+  });
+
+  const items = Object.values(itemTotals).sort((a, b) => b.revenue - a.revenue);
+  const totalRevenue = items.reduce((s, i) => s + i.revenue, 0);
+
+  if (items.length === 0) {
+    el.innerHTML = '<div class="mgmt-empty">No sales data</div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <table class="mgmt-table">
+      <thead><tr><th>ITEM</th><th>QTY</th><th>REVENUE</th><th>% MIX</th></tr></thead>
+      <tbody>
+        ${items.map(i => `<tr>
+          <td>${i.name}</td>
+          <td>${i.qty}</td>
+          <td>$${i.revenue.toFixed(2)}</td>
+          <td>${totalRevenue > 0 ? ((i.revenue / totalRevenue) * 100).toFixed(1) + '%' : '—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderReportEmployee(el) {
+  const closed = getClosedTabs();
+  const staffTotals = {};
+
+  // Build staff name map
+  const staffMap = {};
+  STAFF.forEach(s => staffMap[s.id] = s.name);
+
+  closed.forEach(t => {
+    const staffId = t.createdBy;
+    const name = staffMap[staffId] || 'Unknown';
+    if (!staffTotals[staffId]) {
+      staffTotals[staffId] = { name, tabs: 0, sales: 0, tips: 0, items: 0 };
+    }
+    staffTotals[staffId].tabs++;
+    staffTotals[staffId].sales += tabSubtotal(t) - tabDiscountAmount(t) + tabTax(t);
+    staffTotals[staffId].tips += t.tipAmount || 0;
+    staffTotals[staffId].items += t.lines.filter(l => !l.voided).reduce((s, l) => s + l.qty, 0);
+  });
+
+  const employees = Object.values(staffTotals).sort((a, b) => b.sales - a.sales);
+
+  if (employees.length === 0) {
+    el.innerHTML = '<div class="mgmt-empty">No sales data</div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <table class="mgmt-table">
+      <thead><tr><th>SERVER</th><th>TABS</th><th>ITEMS</th><th>SALES</th><th>TIPS</th></tr></thead>
+      <tbody>
+        ${employees.map(e => `<tr>
+          <td>${e.name}</td>
+          <td>${e.tabs}</td>
+          <td>${e.items}</td>
+          <td>$${e.sales.toFixed(2)}</td>
+          <td>$${e.tips.toFixed(2)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderReportHourly(el) {
+  const closed = getClosedTabs();
+  const hourly = {};
+
+  closed.forEach(t => {
+    const hour = new Date(t.createdAt).getHours();
+    if (!hourly[hour]) hourly[hour] = { tabs: 0, sales: 0, items: 0 };
+    hourly[hour].tabs++;
+    hourly[hour].sales += tabSubtotal(t) - tabDiscountAmount(t) + tabTax(t);
+    hourly[hour].items += t.lines.filter(l => !l.voided).reduce((s, l) => s + l.qty, 0);
+  });
+
+  const hours = Object.keys(hourly).map(Number).sort((a, b) => a - b);
+
+  if (hours.length === 0) {
+    el.innerHTML = '<div class="mgmt-empty">No sales data</div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <table class="mgmt-table">
+      <thead><tr><th>HOUR</th><th>TABS</th><th>ITEMS</th><th>SALES</th></tr></thead>
+      <tbody>
+        ${hours.map(h => {
+          const d = hourly[h];
+          const label = ((h % 12) || 12) + (h < 12 ? ' AM' : ' PM');
+          return `<tr>
+            <td>${label}</td>
+            <td>${d.tabs}</td>
+            <td>${d.items}</td>
+            <td>$${d.sales.toFixed(2)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderReportStation(el) {
+  const closed = getClosedTabs();
+  const stationTotals = {};
+
+  closed.forEach(t => {
+    const st = t.station || 'Unknown';
+    if (!stationTotals[st]) stationTotals[st] = { tabs: 0, sales: 0, items: 0 };
+    stationTotals[st].tabs++;
+    stationTotals[st].sales += tabSubtotal(t) - tabDiscountAmount(t) + tabTax(t);
+    stationTotals[st].items += t.lines.filter(l => !l.voided).reduce((s, l) => s + l.qty, 0);
+  });
+
+  const stations = Object.entries(stationTotals).sort((a, b) => b[1].sales - a[1].sales);
+
+  if (stations.length === 0) {
+    el.innerHTML = '<div class="mgmt-empty">No sales data</div>';
+    return;
+  }
+
+  // Map station codes to labels
+  const stLabel = {};
+  STATIONS.forEach(s => stLabel[s.code] = s.label);
+
+  el.innerHTML = `
+    <table class="mgmt-table">
+      <thead><tr><th>STATION</th><th>TABS</th><th>ITEMS</th><th>SALES</th></tr></thead>
+      <tbody>
+        ${stations.map(([code, d]) => `<tr>
+          <td>${stLabel[code] || code}</td>
+          <td>${d.tabs}</td>
+          <td>${d.items}</td>
+          <td>$${d.sales.toFixed(2)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ═══════════════════════════════════════════
+// VIEW SERVERS — all open tabs by server
+// ═══════════════════════════════════════════
+
+function renderMgmtServers() {
+  const staffMap = {};
+  STAFF.forEach(s => staffMap[s.id] = s.name);
+
+  // Group open tabs by creator
+  const serverTabs = {};
+  tabs.filter(t => t.status === 'open' || t.status === 'sent').forEach(t => {
+    const id = t.createdBy;
+    const name = staffMap[id] || 'Unknown';
+    if (!serverTabs[id]) serverTabs[id] = { name, tabs: [] };
+    serverTabs[id].tabs.push(t);
+  });
+
+  const list = document.getElementById('mgmtServersList');
+  const servers = Object.values(serverTabs);
+
+  if (servers.length === 0) {
+    list.innerHTML = '<div class="mgmt-empty">No open tabs</div>';
+    return;
+  }
+
+  list.innerHTML = servers.map(s => {
+    const totalSales = s.tabs.reduce((sum, t) => sum + tabTotal(t), 0);
+    return `
+      <div class="server-card">
+        <div class="server-card-header">
+          <span class="server-card-name">${s.name}</span>
+          <span class="server-card-stat">${s.tabs.length} tabs — $${totalSales.toFixed(2)}</span>
+        </div>
+        <div class="server-card-tabs">
+          ${s.tabs.map(t => `
+            <div class="server-tab-row" onclick="mgmtSelectTab('${t.id}')">
+              <span>${t.name}</span>
+              <span>$${tabTotal(t).toFixed(2)}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function mgmtSelectTab(tabId) {
+  activeTabId = tabId;
+  renderTabs();
+  renderCart();
+  switchView('terminal');
+}
+
+// ═══════════════════════════════════════════
+// CLOSED CHECKS — reopen, change tip
+// ═══════════════════════════════════════════
+
+function renderMgmtChecks() {
+  const closed = tabs.filter(t => t.status === 'closed' || t.status === 'paid');
+  const staffMap = {};
+  STAFF.forEach(s => staffMap[s.id] = s.name);
+
+  const list = document.getElementById('mgmtChecksList');
+
+  if (closed.length === 0) {
+    list.innerHTML = '<div class="mgmt-empty">No closed checks</div>';
+    return;
+  }
+
+  // Most recent first
+  const sorted = [...closed].sort((a, b) => new Date(b.closedAt || b.paidAt) - new Date(a.closedAt || a.paidAt));
+
+  list.innerHTML = `
+    <table class="mgmt-table">
+      <thead><tr><th>CHECK</th><th>SERVER</th><th>METHOD</th><th>TOTAL</th><th>TIP</th><th>CLOSED</th><th></th></tr></thead>
+      <tbody>
+        ${sorted.map(t => {
+          const total = tabTotal(t);
+          const time = t.closedAt ? new Date(t.closedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
+          return `<tr>
+            <td>${t.name}</td>
+            <td>${staffMap[t.createdBy] || '—'}</td>
+            <td>${(t.payMethod || '—').toUpperCase()}</td>
+            <td>$${total.toFixed(2)}</td>
+            <td>$${(t.tipAmount || 0).toFixed(2)}</td>
+            <td>${time}</td>
+            <td>
+              <button class="mgmt-edit-btn" onclick="openChangeTip('${t.id}')" style="margin-right:4px">TIP</button>
+              <button class="mgmt-edit-btn" onclick="reopenCheck('${t.id}')">REOPEN</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function openChangeTip(tabId) {
+  const tab = tabs.find(t => t.id === tabId);
+  if (!tab) return;
+
+  const sub = tabSubtotal(tab) - tabDiscountAmount(tab);
+  const currentTip = tab.tipAmount || 0;
+
+  document.getElementById('ecPanel').innerHTML = '';
+  const modal = document.getElementById('editCheckModal');
+  document.querySelector('#editCheckModal .modal-title').textContent = 'CHANGE TIP — ' + tab.name;
+  document.querySelector('#editCheckModal .ec-actions').style.display = 'none';
+
+  document.getElementById('ecPanel').innerHTML = `
+    <div class="ec-form">
+      <div class="ec-subtitle">CURRENT TIP: $${currentTip.toFixed(2)}</div>
+      <div class="form-row">
+        <label class="form-label">NEW TIP $</label>
+        <input type="number" id="changeTipAmount" class="form-input" step="0.01" min="0" value="${currentTip.toFixed(2)}" style="width:120px">
+        <button class="mgmt-action-btn" onclick="submitChangeTip('${tabId}')" style="margin-left:8px">SAVE</button>
+      </div>
+      <div class="ec-discount-btns" style="margin-top:8px">
+        <button class="ec-disc-btn" onclick="document.getElementById('changeTipAmount').value=(${sub}*0.18).toFixed(2)">18%</button>
+        <button class="ec-disc-btn" onclick="document.getElementById('changeTipAmount').value=(${sub}*0.20).toFixed(2)">20%</button>
+        <button class="ec-disc-btn" onclick="document.getElementById('changeTipAmount').value=(${sub}*0.25).toFixed(2)">25%</button>
+      </div>
+    </div>`;
+
+  openModal('editCheckModal');
+}
+
+function submitChangeTip(tabId) {
+  const tab = tabs.find(t => t.id === tabId);
+  if (!tab) return;
+
+  const amount = parseFloat(document.getElementById('changeTipAmount').value);
+  if (isNaN(amount) || amount < 0) { showToast('Invalid tip amount'); return; }
+
+  tab.tipAmount = amount;
+  const sub = tabSubtotal(tab) - tabDiscountAmount(tab);
+  tab.tipPct = sub > 0 ? amount / sub : 0;
+
+  closeModal('editCheckModal');
+  // Restore edit check modal state
+  document.querySelector('#editCheckModal .modal-title').textContent = 'EDIT CHECK';
+  document.querySelector('#editCheckModal .ec-actions').style.display = '';
+
+  renderMgmtChecks();
+  showToast('Tip updated to $' + amount.toFixed(2));
+}
+
+function reopenCheck(tabId) {
+  const tab = tabs.find(t => t.id === tabId);
+  if (!tab) return;
+
+  tab.status = 'sent';
+  tab.closedAt = null;
+  tab.paidAt = null;
+  tab.payMethod = null;
+  tab.tipPct = 0;
+  tab.tipAmount = 0;
+
+  // Restore line statuses
+  tab.lines.forEach(l => {
+    if (l.status === 'served') l.status = 'sent';
+  });
+
+  activeTabId = tab.id;
+  renderTabs();
+  renderCart();
+  switchView('terminal');
+  showToast(tab.name + ' reopened');
 }

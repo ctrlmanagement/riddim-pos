@@ -39,6 +39,7 @@
   </div>
 
   <div id="loginError" class="login-error"></div>
+  <button class="login-clock-btn" onclick="openClockInOut()">CLOCK IN / OUT</button>
   <div id="loginStation" class="login-station"></div>
   <div id="stationSelector" class="station-selector"></div>
 </div>
@@ -57,6 +58,7 @@
       <button class="top-nav-btn" id="navTerminal" onclick="switchView('terminal')">TERMINAL</button>
       <button class="top-nav-btn" id="navManagement" onclick="switchView('management')" style="display:none">MANAGEMENT</button>
     </div>
+    <button class="top-bar-btn eightysix" onclick="open86List()" id="btn86">86 <span id="btn86Count"></span></button>
     <div id="topBarUser" class="top-bar-user"></div>
     <div id="topBarClock" class="top-bar-clock"></div>
     <button class="top-bar-btn danger" onclick="logout()">LOCK</button>
@@ -74,6 +76,20 @@
       <!-- Category Bar -->
       <div id="categoryBar" class="category-bar"></div>
 
+      <!-- Seat Selector -->
+      <div id="seatBar" class="seat-bar">
+        <span class="seat-bar-label">SEAT:</span>
+        <button class="seat-btn active" data-seat="0" onclick="selectSeat(0)">ALL</button>
+        <button class="seat-btn" data-seat="1" onclick="selectSeat(1)">1</button>
+        <button class="seat-btn" data-seat="2" onclick="selectSeat(2)">2</button>
+        <button class="seat-btn" data-seat="3" onclick="selectSeat(3)">3</button>
+        <button class="seat-btn" data-seat="4" onclick="selectSeat(4)">4</button>
+        <button class="seat-btn" data-seat="5" onclick="selectSeat(5)">5</button>
+        <button class="seat-btn" data-seat="6" onclick="selectSeat(6)">6</button>
+        <button class="seat-btn" data-seat="7" onclick="selectSeat(7)">7</button>
+        <button class="seat-btn" data-seat="8" onclick="selectSeat(8)">8</button>
+      </div>
+
       <!-- Menu Grid -->
       <div id="menuGrid" class="menu-grid"></div>
 
@@ -86,6 +102,7 @@
           <div id="cartTabName" class="cart-tab-name">NO TAB</div>
           <div id="cartTabType" class="cart-tab-type"></div>
         </div>
+        <button id="btnEditCheck" class="cart-edit-btn" onclick="openEditCheck()" style="display:none">EDIT</button>
       </div>
 
       <div id="cartItems" class="cart-items">
@@ -224,6 +241,9 @@
       <button class="mgmt-nav-btn" data-mgmt="categories" onclick="switchMgmt('categories')">CATEGORIES</button>
       <button class="mgmt-nav-btn" data-mgmt="staff" onclick="switchMgmt('staff')">STAFF / PINS</button>
       <button class="mgmt-nav-btn" data-mgmt="stations" onclick="switchMgmt('stations')">STATIONS</button>
+      <button class="mgmt-nav-btn" data-mgmt="reports" onclick="switchMgmt('reports')">REPORTS</button>
+      <button class="mgmt-nav-btn" data-mgmt="servers" onclick="switchMgmt('servers')">VIEW SERVERS</button>
+      <button class="mgmt-nav-btn" data-mgmt="checks" onclick="switchMgmt('checks')">CLOSED CHECKS</button>
       <button class="mgmt-nav-btn" data-mgmt="settings" onclick="switchMgmt('settings')">POS SETTINGS</button>
       <button class="mgmt-nav-btn" data-mgmt="dayclose" onclick="switchMgmt('dayclose')">CLOSE DAY</button>
     </div>
@@ -267,6 +287,37 @@
           <h2 class="mgmt-title">STATIONS</h2>
         </div>
         <div id="mgmtStationList" class="mgmt-table-wrap"></div>
+      </div>
+
+      <!-- REPORTS -->
+      <div id="mgmt-reports" class="mgmt-section">
+        <div class="mgmt-header">
+          <h2 class="mgmt-title">FOH REPORTS</h2>
+        </div>
+        <div class="rpt-tabs">
+          <button class="rpt-tab active" data-rpt="summary" onclick="switchReport('summary')">SUMMARY</button>
+          <button class="rpt-tab" data-rpt="product" onclick="switchReport('product')">PRODUCT MIX</button>
+          <button class="rpt-tab" data-rpt="employee" onclick="switchReport('employee')">EMPLOYEE</button>
+          <button class="rpt-tab" data-rpt="hourly" onclick="switchReport('hourly')">HOURLY</button>
+          <button class="rpt-tab" data-rpt="station" onclick="switchReport('station')">STATION</button>
+        </div>
+        <div id="rptContent" class="rpt-content"></div>
+      </div>
+
+      <!-- VIEW SERVERS -->
+      <div id="mgmt-servers" class="mgmt-section">
+        <div class="mgmt-header">
+          <h2 class="mgmt-title">VIEW SERVERS</h2>
+        </div>
+        <div id="mgmtServersList" class="mgmt-table-wrap"></div>
+      </div>
+
+      <!-- CLOSED CHECKS -->
+      <div id="mgmt-checks" class="mgmt-section">
+        <div class="mgmt-header">
+          <h2 class="mgmt-title">CLOSED CHECKS</h2>
+        </div>
+        <div id="mgmtChecksList" class="mgmt-table-wrap"></div>
       </div>
 
       <!-- POS SETTINGS -->
@@ -458,8 +509,84 @@
   </div>
 </div>
 
+<!-- ════════════════════════════════════════
+     86 LIST MODAL
+     ════════════════════════════════════════ -->
+<div id="eightySixModal" class="modal-overlay">
+  <div class="modal" style="width:560px">
+    <div class="modal-header">
+      <div class="modal-title">86 LIST</div>
+      <button class="modal-close" onclick="closeModal('eightySixModal')">X</button>
+    </div>
+    <div class="modal-body">
+      <div class="eightysix-search">
+        <input type="text" id="eightySixSearch" class="form-input" placeholder="Search items..." oninput="render86List()">
+      </div>
+      <div id="eightySixList" class="eightysix-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     EDIT CHECK MODAL
+     ════════════════════════════════════════ -->
+<div id="editCheckModal" class="modal-overlay">
+  <div class="modal" style="width:520px">
+    <div class="modal-header">
+      <div class="modal-title">EDIT CHECK</div>
+      <button class="modal-close" onclick="closeModal('editCheckModal')">X</button>
+    </div>
+    <div class="modal-body">
+      <div class="ec-actions">
+        <button class="ec-btn" onclick="ecEditTabName()">EDIT TAB NAME</button>
+        <button class="ec-btn" onclick="ecComp()">COMP ITEM</button>
+        <button class="ec-btn" onclick="ecDiscount()">DISCOUNT</button>
+        <button class="ec-btn" onclick="ecGratuity()">AUTO-GRATUITY</button>
+      </div>
+      <div id="ecPanel" class="ec-panel"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     CLOCK IN / OUT MODAL
+     ════════════════════════════════════════ -->
+<div id="clockModal" class="modal-overlay">
+  <div class="modal" style="width:420px">
+    <div class="modal-header">
+      <div class="modal-title">CLOCK IN / OUT</div>
+      <button class="modal-close" onclick="closeModal('clockModal')">X</button>
+    </div>
+    <div class="modal-body">
+      <div class="clock-pin-display">
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+      </div>
+      <div class="pin-pad" style="margin:0 auto">
+        <button class="pin-btn" onclick="clockPinPress('1')">1</button>
+        <button class="pin-btn" onclick="clockPinPress('2')">2</button>
+        <button class="pin-btn" onclick="clockPinPress('3')">3</button>
+        <button class="pin-btn" onclick="clockPinPress('4')">4</button>
+        <button class="pin-btn" onclick="clockPinPress('5')">5</button>
+        <button class="pin-btn" onclick="clockPinPress('6')">6</button>
+        <button class="pin-btn" onclick="clockPinPress('7')">7</button>
+        <button class="pin-btn" onclick="clockPinPress('8')">8</button>
+        <button class="pin-btn" onclick="clockPinPress('9')">9</button>
+        <button class="pin-btn pin-clear" onclick="clockPinClear()">CLEAR</button>
+        <button class="pin-btn" onclick="clockPinPress('0')">0</button>
+        <button class="pin-btn pin-enter" onclick="clockPinSubmit()">ENTER</button>
+      </div>
+      <div id="clockStatus" class="clock-status"></div>
+      <div id="clockResult" class="clock-result"></div>
+    </div>
+  </div>
+</div>
+
 <script src="js/app.js"></script>
 <script src="js/tables.js"></script>
+<script src="js/features.js"></script>
 <script src="js/management.js"></script>
 </body>
 </html>

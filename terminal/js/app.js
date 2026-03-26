@@ -130,6 +130,7 @@ async function loadAllData() {
     loadCategories(),
     loadMenuItems(),
     loadStations(),
+    typeof loadTableMinimums === 'function' ? loadTableMinimums() : Promise.resolve(),
   ]);
 }
 
@@ -297,13 +298,14 @@ function selectCategory(catId) {
 function renderMenu() {
   const grid = document.getElementById('menuGrid');
   const items = MENU_ITEMS.filter(i => i.cat === activeCategory);
-  grid.innerHTML = items.map(item =>
-    `<div class="menu-item ${item.speedRail ? 'speed-rail' : ''}"
-          onclick="addToCart('${item.id}')">
+  grid.innerHTML = items.map(item => {
+    const is86 = typeof isItem86 === 'function' && isItem86(item.id);
+    return `<div class="menu-item ${item.speedRail ? 'speed-rail' : ''} ${is86 ? 'eighty-sixed' : ''}"
+          onclick="${is86 ? 'showToast(\'Item is 86\\\'d\')' : 'addToCart(\'' + item.id + '\')'}">
       <span class="menu-item-name">${item.name}</span>
-      <span class="menu-item-price">$${item.price}</span>
-    </div>`
-  ).join('');
+      <span class="menu-item-price">${is86 ? '86' : '$' + item.price}</span>
+    </div>`;
+  }).join('');
 }
 
 // ═══════════════════════════════════════════
@@ -319,6 +321,12 @@ function createTab(name, type = 'bar') {
     type: type,
     memberId: null,
     tableNum: null,
+    discount: false,
+    discountPct: 0,
+    discountFlat: 0,
+    discountBy: null,
+    autoGrat: 0,
+    guestCount: 1,
     lines: [],
     status: 'open',
     createdAt: new Date(),
@@ -370,9 +378,12 @@ function addToCart(menuItemId) {
   const item = MENU_ITEMS.find(i => i.id === menuItemId);
   if (!item) return;
 
-  // Check if same unsent item exists — increment qty
+  // Get current seat assignment
+  const seat = typeof getCurrentSeat === 'function' ? getCurrentSeat() : null;
+
+  // Check if same unsent item exists on same seat — increment qty
   const existing = tab.lines.find(l =>
-    l.menuItemId === menuItemId && l.status === 'pending' && !l.voided
+    l.menuItemId === menuItemId && l.status === 'pending' && !l.voided && l.seat === seat
   );
 
   if (existing) {
@@ -384,6 +395,7 @@ function addToCart(menuItemId) {
       name: item.name,
       price: item.price,
       qty: 1,
+      seat: seat,
       status: 'pending',
       voided: false,
       comped: false,
@@ -425,12 +437,25 @@ function tabSubtotal(tab) {
     .reduce((sum, l) => sum + (l.price * l.qty), 0);
 }
 
+function tabDiscountAmount(tab) {
+  if (!tab.discount) return 0;
+  const sub = tabSubtotal(tab);
+  if (tab.discountPct) return sub * tab.discountPct;
+  if (tab.discountFlat) return Math.min(tab.discountFlat, sub);
+  return 0;
+}
+
 function tabTax(tab) {
-  return tabSubtotal(tab) * CONFIG.tax_rate;
+  return (tabSubtotal(tab) - tabDiscountAmount(tab)) * CONFIG.tax_rate;
 }
 
 function tabTotal(tab) {
-  return tabSubtotal(tab) + tabTax(tab);
+  const sub = tabSubtotal(tab);
+  const disc = tabDiscountAmount(tab);
+  const afterDiscount = sub - disc;
+  const tax = afterDiscount * CONFIG.tax_rate;
+  const grat = tab.autoGrat ? afterDiscount * tab.autoGrat : 0;
+  return afterDiscount + tax + grat;
 }
 
 function renderCart() {
@@ -443,6 +468,7 @@ function renderCart() {
   const payBtn = document.getElementById('btnPay');
   const holdBtn = document.getElementById('btnHold');
   const voidBtn = document.getElementById('btnVoid');
+  const editBtn = document.getElementById('btnEditCheck');
 
   if (!tab) {
     headerEl.textContent = 'NO TAB';
@@ -453,44 +479,76 @@ function renderCart() {
     payBtn.disabled = true;
     holdBtn.disabled = true;
     voidBtn.disabled = true;
+    if (editBtn) editBtn.style.display = 'none';
     return;
   }
 
   headerEl.textContent = tab.name;
   typeEl.textContent = tab.type.toUpperCase() + ' TAB';
+  if (editBtn) editBtn.style.display = '';
+
+  // Bottle service: guest count + min spend bar (injected above cart items)
+  let cartExtras = '';
+  if (typeof renderGuestCountBar === 'function') cartExtras += renderGuestCountBar(tab);
+  if (typeof renderMinSpendBar === 'function') cartExtras += renderMinSpendBar(tab);
+
+  // Group lines by seat if any lines have seats
+  const hasSeats = tab.lines.some(l => l.seat);
 
   // Lines
   if (tab.lines.length === 0) {
-    itemsEl.innerHTML = '<div class="cart-empty">Add items from the menu</div>';
+    itemsEl.innerHTML = cartExtras + '<div class="cart-empty">Add items from the menu</div>';
   } else {
-    itemsEl.innerHTML = tab.lines.map(l => {
-      const classes = ['cart-line'];
-      if (l.voided) classes.push('voided');
-      if (l.status === 'sent' || l.status === 'preparing' || l.status === 'ready') classes.push('sent');
+    let html = '';
+    if (hasSeats) {
+      // Group by seat
+      const seatGroups = {};
+      const noSeat = [];
+      tab.lines.forEach(l => {
+        if (l.seat) {
+          if (!seatGroups[l.seat]) seatGroups[l.seat] = [];
+          seatGroups[l.seat].push(l);
+        } else {
+          noSeat.push(l);
+        }
+      });
 
-      return `<div class="${classes.join(' ')}" onclick="removeLine('${l.id}')">
-        <span class="cart-line-qty">${l.qty}x</span>
-        <span class="cart-line-name">
-          ${l.name}
-          ${l.status !== 'pending' && !l.voided ? `<span class="sent-badge">${l.status.toUpperCase()}</span>` : ''}
-          ${l.comped ? '<span class="sent-badge" style="background:#F39C12">COMP</span>' : ''}
-        </span>
-        <span class="cart-line-price">${l.voided ? '—' : '$' + (l.price * l.qty).toFixed(2)}</span>
-      </div>`;
-    }).join('');
+      // Render no-seat items first
+      if (noSeat.length > 0) {
+        html += noSeat.map(l => renderCartLine(l)).join('');
+      }
+      // Then each seat group
+      const seats = Object.keys(seatGroups).sort((a, b) => a - b);
+      seats.forEach(s => {
+        html += `<div class="cart-seat-divider">SEAT ${s}</div>`;
+        html += seatGroups[s].map(l => renderCartLine(l)).join('');
+      });
+    } else {
+      html = tab.lines.map(l => renderCartLine(l)).join('');
+    }
+    itemsEl.innerHTML = cartExtras + html;
   }
 
   // Totals
   const sub = tabSubtotal(tab);
-  const tax = tabTax(tab);
-  const total = tabTotal(tab);
+  const discountAmt = tabDiscountAmount(tab);
+  const afterDiscount = sub - discountAmt;
+  const tax = afterDiscount * CONFIG.tax_rate;
+  const gratAmt = tab.autoGrat ? afterDiscount * tab.autoGrat : 0;
+  const total = afterDiscount + tax + gratAmt;
   const taxPct = (CONFIG.tax_rate * 100).toFixed(1);
 
-  totalsEl.innerHTML = `
-    <div class="cart-total-row"><span>Subtotal</span><span>$${sub.toFixed(2)}</span></div>
-    <div class="cart-total-row"><span>Tax (${taxPct}%)</span><span>$${tax.toFixed(2)}</span></div>
-    <div class="cart-total-row grand"><span>TOTAL</span><span>$${total.toFixed(2)}</span></div>
-  `;
+  let totalsHtml = `<div class="cart-total-row"><span>Subtotal</span><span>$${sub.toFixed(2)}</span></div>`;
+  if (discountAmt > 0) {
+    const discLabel = tab.discountPct ? (tab.discountPct * 100).toFixed(0) + '% off' : '$' + tab.discountFlat.toFixed(2) + ' off';
+    totalsHtml += `<div class="cart-total-row discount"><span>Discount (${discLabel})</span><span>-$${discountAmt.toFixed(2)}</span></div>`;
+  }
+  totalsHtml += `<div class="cart-total-row"><span>Tax (${taxPct}%)</span><span>$${tax.toFixed(2)}</span></div>`;
+  if (gratAmt > 0) {
+    totalsHtml += `<div class="cart-total-row grat"><span>Auto-Grat (${(tab.autoGrat * 100).toFixed(0)}%)</span><span>$${gratAmt.toFixed(2)}</span></div>`;
+  }
+  totalsHtml += `<div class="cart-total-row grand"><span>TOTAL</span><span>$${total.toFixed(2)}</span></div>`;
+  totalsEl.innerHTML = totalsHtml;
 
   // Button states
   const hasPending = tab.lines.some(l => l.status === 'pending' && !l.voided);
@@ -499,6 +557,24 @@ function renderCart() {
   payBtn.disabled = !hasLines;
   holdBtn.disabled = !hasLines;
   voidBtn.disabled = false;
+}
+
+function renderCartLine(l) {
+  const classes = ['cart-line'];
+  if (l.voided) classes.push('voided');
+  if (l.comped) classes.push('comped');
+  if (l.status === 'sent' || l.status === 'preparing' || l.status === 'ready') classes.push('sent');
+
+  return `<div class="${classes.join(' ')}" onclick="removeLine('${l.id}')">
+    <span class="cart-line-qty">${l.qty}x</span>
+    <span class="cart-line-name">
+      ${l.name}
+      ${l.seat ? '<span class="seat-badge">S' + l.seat + '</span>' : ''}
+      ${l.status !== 'pending' && !l.voided ? '<span class="sent-badge">' + l.status.toUpperCase() + '</span>' : ''}
+      ${l.comped ? '<span class="sent-badge" style="background:var(--orange)">COMP</span>' : ''}
+    </span>
+    <span class="cart-line-price">${l.voided || l.comped ? '—' : '$' + (l.price * l.qty).toFixed(2)}</span>
+  </div>`;
 }
 
 // ═══════════════════════════════════════════
@@ -541,10 +617,9 @@ function openPayment() {
   const tab = getActiveTab();
   if (!tab) return;
 
-  const total = tabTotal(tab);
-  document.getElementById('payAmountValue').textContent = '$' + total.toFixed(2);
   selectedPayMethod = 'card';
-  selectedTip = CONFIG.default_tip_pct;
+  // If auto-grat is set, skip manual tip
+  selectedTip = tab.autoGrat ? 0 : CONFIG.default_tip_pct;
   updatePayMethodButtons();
   updateTipButtons();
   openModal('paymentModal');
@@ -573,10 +648,10 @@ function updateTipButtons() {
 
   const tab = getActiveTab();
   if (!tab) return;
-  const sub = tabSubtotal(tab);
-  const tax = tabTax(tab);
-  const tip = sub * selectedTip;
-  const grand = sub + tax + tip;
+  const base = tabTotal(tab); // already includes discount, tax, auto-grat
+  const sub = tabSubtotal(tab) - tabDiscountAmount(tab);
+  const tip = tab.autoGrat ? 0 : sub * selectedTip; // no manual tip if auto-grat
+  const grand = base + tip;
   document.getElementById('payAmountValue').textContent = '$' + grand.toFixed(2);
 }
 
@@ -587,8 +662,9 @@ function submitPayment() {
   tab.status = 'paid';
   tab.paidAt = new Date();
   tab.payMethod = selectedPayMethod;
-  tab.tipPct = selectedTip;
-  tab.tipAmount = tabSubtotal(tab) * selectedTip;
+  const tipBase = tabSubtotal(tab) - tabDiscountAmount(tab);
+  tab.tipPct = tab.autoGrat || selectedTip;
+  tab.tipAmount = tab.autoGrat ? tipBase * tab.autoGrat : tipBase * selectedTip;
 
   // Mark all lines served
   tab.lines.forEach(l => {
