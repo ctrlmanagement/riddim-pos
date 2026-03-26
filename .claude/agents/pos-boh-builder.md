@@ -141,13 +141,13 @@ BOH uses the same design tokens as the terminal but optimized for desktop/laptop
 
 ## Priority Build Order
 
-1. **Audit Trail** — surface void/comp/discount logs with reasons (data already captured by terminal)
-2. **Transaction History** — searchable ledger of all tabs
-3. **Sales Reports** — daily/weekly/monthly by category, server, station, daypart
-4. **Employee Reports** — sales per server, labor hours, tip summaries, checkout history
-5. **Menu Item Analytics** — product mix, void/comp rates, cost analysis
-6. **Operating Dashboard** — high-level KPIs (revenue, covers, avg check, labor %)
-7. **Daily Summary → P&L** — auto-write to daily_payouts at day close
+1. ~~**Audit Trail**~~ ✅ S78 — 8 audit types, stats, date/type filters, logs to pos_audit_log
+2. ~~**Transaction History**~~ ✅ S78 — searchable by date, Order #, Sale ID, method. Detail modal.
+3. ~~**Sales Reports**~~ ✅ S78 — summary (9 KPIs + payment breakdown), product mix, employee, hourly, station
+4. ~~**Employee Reports**~~ ✅ S78 — sales, tips, items, hours, $/hour per server
+5. ~~**Menu Item Analytics**~~ ✅ S78 — product mix with qty, revenue, % mix, comp/void counts
+6. ~~**Operating Dashboard**~~ ✅ S78 — summary report with gross/net sales, tax, tips, avg check, comps, voided
+7. **Daily Summary → P&L** — auto-write to daily_payouts at day close (Phase 6)
 8. **EMV/Payment Reports** — pending Stripe Terminal integration (Phase 3)
 
 ---
@@ -158,8 +158,8 @@ BOH uses the same design tokens as the terminal but optimized for desktop/laptop
 |---|---|---|
 | Target device | Sunmi T3 tablet (1920x1080 touch) | Desktop/laptop browser |
 | Layout | Touch-optimized, single-page | Desktop nav, multi-page feel |
-| Data scope | Current session (in-memory) | Historical (Supabase queries across dates) |
-| Write access | Orders, tabs, payments, clock | Menu config, reports, P&L export |
+| Data scope | Current session (in-memory + local PG) | Historical (local PG via REST API + Supabase) |
+| Write access | Orders, tabs, payments, clock | Menu config, security groups, reports |
 | Users | Bartenders, servers | Owner, managers |
 | Primary UI | Menu grid + cart | Data tables + charts |
 | Offline need | Critical (must work without internet) | Nice-to-have (typically has internet) |

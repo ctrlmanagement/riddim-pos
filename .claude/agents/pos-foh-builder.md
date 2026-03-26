@@ -6,10 +6,13 @@
 ## Architecture Context
 
 ### Stack
-- **Terminal UI:** Single-page HTML/CSS/JS served locally (no framework, no build step)
-- **Files:** `terminal/index.html`, `terminal/css/terminal.css`, `terminal/js/app.js`, `terminal/js/tables.js`, `terminal/js/management.js`
-- **Cloud DB:** Supabase (`cbvryfgrqzdvbqigyrgh`) — shared with RIDDIM platform (51+ tables)
+- **Terminal UI:** Single-page HTML/CSS/JS served by local server (no framework, no build step)
+- **Files:** `terminal/index.html`, 19 JS modules in `terminal/js/`, 19 CSS partials in `terminal/css/`
+- **Local Server:** Node.js + Express + Socket.IO on port 3000 (`server/index.js`)
+- **Local DB:** PostgreSQL 16 (`riddim_pos`) — orders, payments, audit, clock
+- **Cloud DB:** Supabase (`cbvryfgrqzdvbqigyrgh`) — menu, staff, security groups, config
 - **Target hardware:** Sunmi T3 Pro Max (1920x1080 landscape), also runs in desktop browser for dev
+- **Server link:** `terminal/js/server-link.js` — auto-detects local server, mirrors all actions to REST API + Socket.IO
 
 ### Key POS Tables (Supabase)
 ```
@@ -21,7 +24,9 @@ pos_stations        — id, code, label, pos_name, active
 
 ### Integration Tables (existing RIDDIM)
 ```
-staff               — id, first_name, last_name, role, pos_pin, pos_role, active
+staff               — id, first_name, last_name, role, pos_pin, pos_role, security_group_id, active
+pos_security_groups — id, name, description, is_default
+pos_security_permissions — id, group_id, permission, enabled (39 permissions per group)
 table_sessions      — table_number, guest_name, party_size, server_name, status, booking_id
 table_bookings      — table_number, guest_name, party_size, status
 inv_products        — id, name, pos_item_id (FK bridge to POS menu)
