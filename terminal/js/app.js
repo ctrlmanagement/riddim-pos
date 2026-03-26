@@ -259,10 +259,11 @@ function renderMenu() {
 // ═══════════════════════════════════════════
 
 function createTab(name, type = 'bar') {
+  const num = nextTabNum++;
   const tab = {
     id: 'tab-' + Date.now(),
-    num: nextTabNum++,
-    name: name || 'Tab ' + nextTabNum,
+    num: num,
+    name: name || 'Tab ' + num,
     type: type, // bar, table, member
     memberId: null,
     tableId: null,
@@ -312,7 +313,7 @@ function addToCart(menuItemId) {
   let tab = getActiveTab();
   if (!tab) {
     // Auto-create tab if none active
-    tab = createTab('Tab ' + nextTabNum);
+    tab = createTab();
   }
 
   const item = MENU_ITEMS.find(i => i.id === menuItemId);
@@ -487,7 +488,7 @@ function openPayment() {
   const total = tabTotal(tab);
   document.getElementById('payAmountValue').textContent = '$' + total.toFixed(2);
   selectedPayMethod = 'card';
-  selectedTip = 0;
+  selectedTip = 0.20; // Bar tabs default to 20%
   updatePayMethodButtons();
   updateTipButtons();
   openModal('paymentModal');
@@ -533,8 +534,16 @@ function submitPayment() {
   tab.tipPct = selectedTip;
   tab.tipAmount = tabSubtotal(tab) * selectedTip;
 
-  // Move to closed
+  // Mark all lines served
+  tab.lines.forEach(l => {
+    if (!l.voided && l.status !== 'voided') {
+      l.status = 'served';
+    }
+  });
+
+  // Close tab after payment recorded
   tab.status = 'closed';
+  tab.closedAt = new Date();
 
   // Clear from active
   activeTabId = null;
@@ -544,6 +553,53 @@ function submitPayment() {
   }
 
   closeModal('paymentModal');
+  renderTabs();
+  renderCart();
+}
+
+// ═══════════════════════════════════════════
+// HOLD / VOID
+// ═══════════════════════════════════════════
+
+function holdTab() {
+  const tab = getActiveTab();
+  if (!tab) return;
+
+  // Hold = park the tab, deselect it
+  activeTabId = null;
+  const openTabs = tabs.filter(t => (t.status === 'open' || t.status === 'sent') && t.id !== tab.id);
+  if (openTabs.length > 0) {
+    activeTabId = openTabs[0].id;
+  }
+
+  renderTabs();
+  renderCart();
+}
+
+function voidTab() {
+  const tab = getActiveTab();
+  if (!tab) return;
+
+  // Manager auth check (Phase 2: manager PIN prompt)
+  if (currentUser.role !== 'manager') {
+    // For now, allow all staff — Phase 2 will gate behind manager PIN
+  }
+
+  tab.status = 'voided';
+  tab.voidedAt = new Date();
+  tab.voidedBy = currentUser.id;
+  tab.lines.forEach(l => {
+    l.voided = true;
+    l.status = 'voided';
+  });
+
+  // Move to next open tab
+  activeTabId = null;
+  const openTabs = tabs.filter(t => t.status === 'open' || t.status === 'sent');
+  if (openTabs.length > 0) {
+    activeTabId = openTabs[0].id;
+  }
+
   renderTabs();
   renderCart();
 }
@@ -560,7 +616,7 @@ function openNewTabModal() {
 
 function createNamedTab() {
   const name = document.getElementById('newTabName').value.trim();
-  createTab(name || 'Tab ' + nextTabNum);
+  createTab(name);
 }
 
 function createQuickTab(type) {

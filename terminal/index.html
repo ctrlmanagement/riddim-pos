@@ -90,8 +90,8 @@
         <div class="cart-actions">
           <button id="btnFire" class="cart-btn fire" onclick="fireOrder()" disabled>FIRE</button>
           <button id="btnPay" class="cart-btn pay" onclick="openPayment()" disabled>PAY</button>
-          <button id="btnHold" class="cart-btn hold" onclick="" disabled>HOLD</button>
-          <button id="btnVoid" class="cart-btn void" onclick="" disabled>VOID</button>
+          <button id="btnHold" class="cart-btn hold" onclick="holdTab()" disabled>HOLD</button>
+          <button id="btnVoid" class="cart-btn void" onclick="voidTab()" disabled>VOID</button>
         </div>
       </div>
     </div>
@@ -124,9 +124,9 @@
       <div class="pay-tip">
         <div class="pay-tip-label">TIP</div>
         <div class="pay-tip-options">
-          <button class="tip-btn selected" data-tip="0" onclick="selectTip(0)">No Tip</button>
+          <button class="tip-btn" data-tip="0" onclick="selectTip(0)">No Tip</button>
           <button class="tip-btn" data-tip="0.18" onclick="selectTip(0.18)">18%</button>
-          <button class="tip-btn" data-tip="0.20" onclick="selectTip(0.20)">20%</button>
+          <button class="tip-btn selected" data-tip="0.20" onclick="selectTip(0.20)">20%</button>
           <button class="tip-btn" data-tip="0.25" onclick="selectTip(0.25)">25%</button>
         </div>
       </div>
