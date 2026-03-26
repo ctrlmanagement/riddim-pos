@@ -34,10 +34,12 @@ app.use('/kds', express.static(path.join(__dirname, '..', 'kds')));
 const ordersRouter = require('./routes/orders');
 const clockRouter = require('./routes/clock');
 const transactionsRouter = require('./routes/transactions');
+const auditRouter = require('./routes/audit');
 
 app.use('/api/orders', ordersRouter);
 app.use('/api/clock', clockRouter);
 app.use('/api/transactions', transactionsRouter);
+app.use('/api/audit', auditRouter);
 
 // Health check
 app.get('/api/health', async (req, res) => {
