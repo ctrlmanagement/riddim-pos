@@ -224,7 +224,7 @@ function renderMgmtChecks() {
             <td>${time}</td>
             <td>
               <button class="mgmt-edit-btn" onclick="openChangeTip('${t.id}')" style="margin-right:4px">TIP</button>
-              <button class="mgmt-edit-btn" onclick="reopenCheck('${t.id}')">REOPEN</button>
+              ${currentUser && currentUser.role === 'owner' ? `<button class="mgmt-edit-btn" onclick="reopenCheck('${t.id}')">REOPEN</button>` : ''}
             </td>
           </tr>`;
         }).join('')}
@@ -295,9 +295,24 @@ function submitChangeTip(tabId) {
   if (typeof serverTipAdjust === 'function') serverTipAdjust(tab, amount);
 }
 
-function reopenCheck(tabId) {
+async function reopenCheck(tabId) {
   const tab = tabs.find(t => t.id === tabId);
   if (!tab) return;
+
+  // Owner-only gate — no GM or below
+  if (!currentUser || (currentUser.role !== 'owner')) {
+    showToast('Owner authorization required to reopen checks');
+    return;
+  }
+
+  // Store previous payment info before clearing
+  tab.previousPayment = {
+    method: tab.payMethod,
+    total: typeof tabTotal === 'function' ? tabTotal(tab) : 0,
+    tip: tab.tipAmount || 0,
+    closedAt: tab.closedAt,
+    deposit: tab.depositAmount || 0,
+  };
 
   tab.status = 'sent';
   tab.closedAt = null;
@@ -311,16 +326,34 @@ function reopenCheck(tabId) {
     if (l.status === 'served') l.status = 'sent';
   });
 
+  // Re-fetch booking data (deposit, min spend) from Supabase
+  if (tab.bookingId && typeof applyBookingToTab === 'function') {
+    await applyBookingToTab(tab, tab.bookingId);
+  }
+
+  // Reopen the table session if it was closed
+  if (tab.sessionId && tab.tableNum) {
+    const { error } = await sb
+      .from('table_sessions')
+      .update({ status: 'seated', closed_at: null, payment_amount: 0 })
+      .eq('id', tab.sessionId);
+    if (!error && typeof tableSessions !== 'undefined') {
+      tableSessions[tab.tableNum] = { id: tab.sessionId, table_number: tab.tableNum, status: 'seated' };
+    }
+  }
+
   activeTabId = tab.id;
   renderTabs();
   renderCart();
+  if (typeof updateFloorPlan === 'function') updateFloorPlan();
   switchView('terminal');
-  showToast(tab.name + ' reopened');
+  showToast(tab.name + ' reopened — deposit and payments restored');
 
   // Audit log
   if (typeof serverAuditLog === 'function') {
     serverAuditLog('tab_reopen', {
       order_id: tab.serverId, tab_name: tab.name, order_num: tab.orderNum, station_code: STATION.code,
+      previous_payment: tab.previousPayment,
     });
   }
 }
