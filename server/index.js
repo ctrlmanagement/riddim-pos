@@ -35,11 +35,13 @@ const ordersRouter = require('./routes/orders');
 const clockRouter = require('./routes/clock');
 const transactionsRouter = require('./routes/transactions');
 const auditRouter = require('./routes/audit');
+const reportsRouter = require('./routes/reports');
 
 app.use('/api/orders', ordersRouter);
 app.use('/api/clock', clockRouter);
 app.use('/api/transactions', transactionsRouter);
 app.use('/api/audit', auditRouter);
+app.use('/api/reports', reportsRouter);
 
 // Health check
 app.get('/api/health', async (req, res) => {
