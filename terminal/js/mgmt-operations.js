@@ -224,7 +224,7 @@ function renderMgmtChecks() {
             <td>${time}</td>
             <td>
               <button class="mgmt-edit-btn" onclick="openChangeTip('${t.id}')" style="margin-right:4px">TIP</button>
-              ${currentUser && currentUser.role === 'owner' ? `<button class="mgmt-edit-btn" onclick="reopenCheck('${t.id}')">REOPEN</button>` : ''}
+              ${currentUser && (currentUser.role === 'owner' || currentUser.role === 'manager') ? `<button class="mgmt-edit-btn" onclick="reopenCheck('${t.id}')">REOPEN</button>` : ''}
             </td>
           </tr>`;
         }).join('')}
@@ -299,9 +299,17 @@ async function reopenCheck(tabId) {
   const tab = tabs.find(t => t.id === tabId);
   if (!tab) return;
 
-  // Owner-only gate — no GM or below
-  if (!currentUser || (currentUser.role !== 'owner')) {
-    showToast('Owner authorization required to reopen checks');
+  // Permission gate: manager+ can reopen, but only owner can reopen checks with booking deposits
+  const isOwner = currentUser && currentUser.role === 'owner';
+  const isManager = currentUser && (currentUser.role === 'owner' || currentUser.role === 'manager');
+  const hasDeposit = tab.depositAmount > 0 || tab.bookingId;
+
+  if (!isManager) {
+    showToast('Manager authorization required to reopen checks');
+    return;
+  }
+  if (hasDeposit && !isOwner) {
+    showToast('Owner authorization required — check has a booking deposit');
     return;
   }
 
