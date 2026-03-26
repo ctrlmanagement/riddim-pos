@@ -112,6 +112,15 @@ BAR4 (Bar 4, POS 4), BAR5 (SVC, POS 7), LR (Liquor Room, no POS)
 | FOH reports | Done S76 | 5 types: summary, product, employee, hourly, station |
 | Server link | Done S78 | Socket.IO + REST to local server, auto-detect, SERVER/OFFLINE badge |
 | Permission gating | Done S78 | hasPermission() checks on all actions, UI hides unauthorized buttons |
+| Member lookup | Done S79 | Phone search (.ilike), tier badges, links member_id to tab |
+| Reservation seating | Done S79 | RESERVATIONS panel, SEAT button, creates session + tab with deposit |
+| Deposit split payment | Done S79 | Deposit = payment #1, balance = card/cash. Unused → OTHER INCOME |
+| Booking context in cart | Done S79 | Event name, guest name, deposit amount shown at top of cart |
+| Deferred tab creation | Done S79 | Table click sets pending, tab created on first item or reservation |
+| Min spend with tax | Done S79 | Subtotal + tax (no grat) determines minimum met |
+| Tab hydration | Done S79 | hydrateTabsFromServer() loads today's orders from local PG on login |
+| Reopen permissions | Done S79 | tab.reopen + tab.reopen_deposit (live Supabase check) |
+| $0 checkout | Done S79 | PAY always enabled — comps, voids, exact cash, deposit-only |
 
 ---
 

@@ -1,5 +1,5 @@
 # RIDDIM POS — Claude Code Project Context
-**AG Entertainment | Initialized S74 | March 25, 2026**
+**AG Entertainment | S79 | March 26, 2026**
 
 ## What This Project Is
 Custom point-of-sale system for RIDDIM Supper Club (Atlanta, GA). Local-first architecture: on-premise server + Android tablet terminals. Integrates with the existing RIDDIM Supabase backend (51 tables — membership, inventory, P&L, events, bookings, ticketing).
@@ -103,6 +103,12 @@ const BAR_CONFIG = [
 5. **pos_item_id on inv_products is the bridge.** Menu items link to inventory products through this FK.
 6. **Same Supabase project.** POS tables live alongside the existing 51 tables in `cbvryfgrqzdvbqigyrgh`.
 7. **RIDDIM design system applies.** Obsidian/gold/ivory palette, Bebas Neue labels, DM Sans body.
+8. **Deposit is a split payment.** Payment #1 = deposit, #2 = balance. Unused deposit → OTHER INCOME. (S79)
+9. **Tab/session not created until first item or reservation seat.** No blank tables in DB. (S79)
+10. **Min spend includes tax, no gratuity.** Subtotal + tax determines minimum met. (S79)
+11. **tab.reopen_deposit is separate from tab.reopen.** Owner-only by default. (S79)
+12. **booking_id stored on pos_orders.** Required for deposit to survive terminal restart. (S79)
+13. **Reopen permissions checked live from Supabase.** Not from login-time cache. (S79)
 
 ## Research Briefs
 Located at `~/ctrl/riddimsupperclub/_briefings/pos-system/`:
@@ -117,9 +123,10 @@ Located at `~/ctrl/riddimsupperclub/_briefings/pos-system/`:
 ## Build Priority
 Start staff-facing (terminal UI), build the middle (server), connect outward (sync + integrations).
 
-Phase 1: Terminal UI — bartender order flow (open tab → add drinks → fire → close → pay)
-Phase 2: Local server — order engine, Socket.IO, local PostgreSQL
+Phase 1: Terminal UI — COMPLETE (S74-S76)
+Phase 2: Local server — COMPLETE (S78)
+Phase 2.5: RIDDIM integration — COMPLETE (S79) — table_sessions, reservations, members, deposits
 Phase 3: Payment — Stripe Terminal integration
 Phase 4: KDS — kitchen/bar display routing
 Phase 5: Sync — local PG ↔ Supabase bidirectional
-Phase 6: Integration — inventory, P&L, membership, bookings auto-connect
+Phase 6: Integration — inventory, P&L auto-connect
