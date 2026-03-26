@@ -191,6 +191,51 @@ async function closeBooking(bookingId, paymentAmount) {
   if (error) console.error('Failed to close booking:', error);
 }
 
+// Fetch booking details and apply deposit/min spend to a tab
+async function applyBookingToTab(tab, bookingId) {
+  if (!bookingId) return;
+
+  const { data: booking, error } = await sb
+    .from('table_bookings')
+    .select('id, guest_name, guest_phone, party_size, minimum_spend_required, deposit_amount, deposit_paid, member_id, section_name, notes')
+    .eq('id', bookingId)
+    .single();
+
+  if (error || !booking) {
+    console.error('Failed to load booking:', error);
+    return;
+  }
+
+  tab.bookingId = booking.id;
+
+  // Transfer min spend from booking
+  if (booking.minimum_spend_required) {
+    tab.minSpendRequired = parseFloat(booking.minimum_spend_required);
+  }
+
+  // Transfer deposit
+  if (booking.deposit_paid && booking.deposit_amount) {
+    tab.depositAmount = parseFloat(booking.deposit_amount);
+  }
+
+  // Transfer guest info if not already set
+  if (!tab.guestName && booking.guest_name) tab.guestName = booking.guest_name;
+  if (!tab.guestPhone && booking.guest_phone) tab.guestPhone = booking.guest_phone;
+  if (!tab.memberId && booking.member_id) tab.memberId = booking.member_id;
+  if (booking.party_size) tab.guestCount = booking.party_size;
+  if (booking.notes) tab.bookingNotes = booking.notes;
+
+  // Load member details if booking has a member
+  if (booking.member_id && !tab.memberName && typeof lookupMemberById === 'function') {
+    const member = await lookupMemberById(booking.member_id);
+    if (member) {
+      tab.memberName = member.first_name + ' ' + (member.last_name || '');
+      tab.memberTier = member.tier;
+      tab.memberPoints = member.total_points;
+    }
+  }
+}
+
 // ═══════════════════════════════════════════
 // UPDATE FLOOR PLAN VISUALS
 // ═══════════════════════════════════════════
@@ -486,9 +531,13 @@ async function tableClick(tableNum) {
       tab.guestName = session.guest_name;
     }
     if (session.guest_phone) tab.guestPhone = session.guest_phone;
-    if (session.booking_id) tab.bookingId = session.booking_id;
     if (session.member_id) tab.memberId = session.member_id;
     if (session.party_size) tab.guestCount = session.party_size;
+
+    // Fetch booking deposit/min spend if session is linked to a booking
+    if (session.booking_id) {
+      await applyBookingToTab(tab, session.booking_id);
+    }
   } else {
     // No existing session — create one in Supabase
     await createTableSession(tab);

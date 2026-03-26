@@ -71,7 +71,21 @@ function showReceipt(tab) {
   if (tip > 0 && !tab.autoGrat) {
     html += `<div class="rcpt-row"><span>Tip</span><span>$${tip.toFixed(2)}</span></div>`;
   }
-  html += `<div class="rcpt-row total"><span>TOTAL</span><span>$${total.toFixed(2)}</span></div>`;
+  // Deposit credit
+  const deposit = tab.depositAmount || 0;
+  if (deposit > 0) {
+    html += `<div class="rcpt-row"><span>Deposit Applied</span><span>-$${deposit.toFixed(2)}</span></div>`;
+    const balanceDue = Math.max(0, total - deposit);
+    html += `<div class="rcpt-row total"><span>BALANCE DUE</span><span>$${balanceDue.toFixed(2)}</span></div>`;
+  } else {
+    html += `<div class="rcpt-row total"><span>TOTAL</span><span>$${total.toFixed(2)}</span></div>`;
+  }
+
+  // Min spend note
+  if (tab.minSpendRequired && tab.minSpendRequired > 0) {
+    const met = sub >= tab.minSpendRequired;
+    html += `<div class="rcpt-center rcpt-sm" style="margin-top:4px;color:${met ? '#27AE60' : '#E74C3C'}">Min Spend: $${tab.minSpendRequired.toFixed(0)} ${met ? '(MET)' : '(NOT MET)'}</div>`;
+  }
 
   html += '<hr class="rcpt-divider">';
 
