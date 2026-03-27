@@ -46,6 +46,7 @@ router.post('/close', async (req, res) => {
       SELECT
         COALESCE(SUM(p.amount) FILTER (WHERE p.method = 'cash'), 0) as cash_sales,
         COALESCE(SUM(p.amount) FILTER (WHERE p.method = 'card'), 0) as card_sales,
+        COALESCE(SUM(p.amount) FILTER (WHERE p.method = 'deposit'), 0) as deposit_applied,
         COALESCE(SUM(p.tip_amount) FILTER (WHERE p.method = 'cash'), 0) as cash_tips,
         COALESCE(SUM(p.tip_amount) FILTER (WHERE p.method = 'card'), 0) as card_tips,
         COALESCE(SUM(p.tip_amount), 0) as total_tips
@@ -110,7 +111,7 @@ router.post('/close', async (req, res) => {
     payoutRows.push({ label: 'DSR:Comp Total', amount: parseFloat(comps.comp_total) });
     payoutRows.push({ label: 'DSR:Table Service Fees', amount: parseFloat(sales.service_fees) });
     payoutRows.push({ label: 'DSR:Alternative Fees', amount: 0 });
-    payoutRows.push({ label: 'DSR:House Pymts', amount: 0 });
+    payoutRows.push({ label: 'DSR:House Pymts', amount: parseFloat(payments.deposit_applied) });
     payoutRows.push({ label: 'DSR:Liquor Adj Sales', amount: parseFloat(sales.net_sales) - parseFloat(comps.comp_total) });
     payoutRows.push({ label: 'DSR:Valet Parking', amount: 0 });
 
@@ -176,6 +177,7 @@ router.post('/close', async (req, res) => {
         card_tips: parseFloat(payments.card_tips),
         cash_sales: parseFloat(payments.cash_sales),
         cash_tips: parseFloat(payments.cash_tips),
+        deposit_applied: parseFloat(payments.deposit_applied),
         comp_total: parseFloat(comps.comp_total),
         order_count: parseInt(sales.order_count),
         void_count: parseInt(sales.void_count),
