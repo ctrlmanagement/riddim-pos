@@ -373,7 +373,10 @@ async function reopenCheck(tabId) {
 // CLOSE DAY
 // ═══════════════════════════════════════════
 
-function renderMgmtDayClose() {
+async function renderMgmtDayClose() {
+  // Load paid outs from server
+  await loadPaidOuts();
+
   const closedTabs = tabs.filter(t => t.status === 'closed');
   const voidedTabs = tabs.filter(t => t.status === 'voided');
   const openTabs = tabs.filter(t => t.status === 'open' || t.status === 'sent');
@@ -388,6 +391,8 @@ function renderMgmtDayClose() {
     if (t.payMethod === 'cash') cashSales += sub + tax;
     if (t.payMethod === 'comp') compSales += sub + tax;
   });
+
+  const netCash = cashSales - paidOutsTotal;
 
   const el = document.getElementById('mgmtDayClose');
   el.innerHTML = `
@@ -430,8 +435,48 @@ function renderMgmtDayClose() {
         <span>GRAND TOTAL</span>
         <span>$${(totalSales + totalTips).toFixed(2)}</span>
       </div>
+      <div class="dayclose-divider"></div>
+      <div class="dayclose-row" style="color:var(--red)">
+        <span>PAID OUTS</span>
+        <span>-$${paidOutsTotal.toFixed(2)}</span>
+      </div>
+      <div class="dayclose-row grand">
+        <span>NET CASH</span>
+        <span>$${netCash.toFixed(2)}</span>
+      </div>
     </div>
-    ${openTabs.length > 0 ? '<div class="dayclose-warning">Close all open tabs before closing the day</div>' : `
+
+    <!-- Paid Outs List -->
+    <div style="margin-top:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <span style="font-family:var(--font-label);font-size:14px;color:var(--gold);letter-spacing:2px">PAID OUTS (${paidOutsList.length})</span>
+        <button class="mgmt-action-btn" onclick="openPaidOut()">+ PAID OUT</button>
+      </div>
+      ${paidOutsList.length === 0
+        ? '<div style="color:var(--ash);font-size:14px;padding:12px 0">No paid outs recorded today</div>'
+        : `<div style="background:var(--obsidian-mid);border:1px solid var(--surface);border-radius:var(--radius-lg);padding:12px 16px">
+            ${paidOutsList.map(po => `
+              <div class="po-list-item">
+                <div>
+                  <div class="po-list-cat">${po.category}</div>
+                  ${po.notes ? `<div class="po-list-note">${po.notes}</div>` : ''}
+                  <div class="po-list-note">${po.staff_name} &bull; ${new Date(po.recorded_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px">
+                  <span class="po-list-amt">$${parseFloat(po.amount).toFixed(2)}</span>
+                  ${hasPermission('mgmt.void') ? `<button class="mgmt-edit-btn" onclick="deletePaidOut('${po.id}')" style="color:var(--red)">X</button>` : ''}
+                </div>
+              </div>
+            `).join('')}
+            <div class="po-list-item" style="border-bottom:none;font-family:var(--font-label);color:var(--ivory)">
+              <span>TOTAL PAID OUTS</span>
+              <span class="po-list-amt">$${paidOutsTotal.toFixed(2)}</span>
+            </div>
+          </div>`
+      }
+    </div>
+
+    ${openTabs.length > 0 ? '<div class="dayclose-warning" style="margin-top:20px">Close all open tabs before closing the day</div>' : `
       <div class="form-actions" style="margin-top:20px">
         <button class="mgmt-action-btn" onclick="closeDay()">CLOSE DAY</button>
       </div>
@@ -440,12 +485,52 @@ function renderMgmtDayClose() {
 }
 
 async function closeDay() {
-  // Phase 2: This will write to daily_payouts / P&L tables
-  showToast('Day closed — summary saved');
+  // Confirm
+  if (!confirm('Close the day and push P&L data to Supabase? This cannot be undone.')) return;
+
+  const result = await serverPost('/api/sessions/close', {
+    closed_by: currentUser.id,
+    closed_by_name: currentUser.name,
+  });
+
+  if (!result) {
+    showToast('Day close failed — check server connection');
+    return;
+  }
+
+  if (result.error) {
+    showToast(result.error);
+    return;
+  }
+
+  const s = result.summary;
+  const syncMsg = result.sync.pushed > 0
+    ? ` — ${result.sync.pushed} rows pushed to P&L`
+    : result.sync.errors.length > 0
+      ? ' — P&L sync pending (offline)'
+      : '';
+
+  showToast(`Day closed: $${s.net_sales.toFixed(2)} net sales, $${s.paid_outs.toFixed(2)} paid outs${syncMsg}`);
+
+  // Audit log
+  if (typeof serverAuditLog === 'function') {
+    serverAuditLog('day_close', {
+      session_id: result.session.id,
+      date: s.date,
+      net_sales: s.net_sales,
+      total_tips: s.total_tips,
+      paid_outs: s.paid_outs,
+      cash_deposit: s.cash_deposit,
+      rows_pushed: result.sync.pushed,
+    });
+  }
+
   // Reset terminal state
   tabs = [];
   activeTabId = null;
   nextTabNum = 1;
+  paidOutsList = [];
+  paidOutsTotal = 0;
   switchView('terminal');
   renderTabs();
   renderCart();

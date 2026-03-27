@@ -22,7 +22,7 @@ const stats = {
   lastError: null,
   totalSynced: 0,
   totalErrors: 0,
-  pending: { orders: 0, lines: 0, payments: 0, clock: 0, audit: 0, sessions: 0 },
+  pending: { orders: 0, lines: 0, payments: 0, clock: 0, audit: 0, paid_outs: 0, sessions: 0 },
 };
 
 // ── SYNC ORDERS ──────────────────────────────────────────────
@@ -212,6 +212,40 @@ async function syncAudit() {
   return rows.length;
 }
 
+// ── SYNC PAID OUTS ──────────────────────────────────────────
+async function syncPaidOuts() {
+  const { rows } = await pool.query(
+    `SELECT * FROM pos_paid_outs WHERE synced_at IS NULL ORDER BY created_at LIMIT $1`,
+    [BATCH_SIZE]
+  );
+  if (!rows.length) return 0;
+
+  const { error } = await supabaseAdmin
+    .from('pos_paid_outs_sync')
+    .upsert(rows.map(r => ({
+      id: r.id,
+      session_id: r.session_id,
+      category: r.category,
+      amount: r.amount,
+      notes: r.notes,
+      staff_id: r.staff_id,
+      staff_name: r.staff_name,
+      station_code: r.station_code,
+      recorded_at: r.recorded_at,
+      created_at: r.created_at,
+      synced_at: new Date().toISOString(),
+    })), { onConflict: 'id' });
+
+  if (error) throw new Error(`paid_outs: ${error.message}`);
+
+  const ids = rows.map(r => r.id);
+  await pool.query(
+    `UPDATE pos_paid_outs SET synced_at = now() WHERE id = ANY($1)`,
+    [ids]
+  );
+  return rows.length;
+}
+
 // ── SYNC SESSIONS ────────────────────────────────────────────
 async function syncSessions() {
   const { rows } = await pool.query(
@@ -255,15 +289,17 @@ async function updatePendingCounts() {
     pool.query(`SELECT COUNT(*) FROM pos_payments p JOIN pos_orders o ON o.id = p.order_id WHERE o.synced_at IS NULL`),
     pool.query(`SELECT COUNT(*) FROM pos_clock_entries WHERE synced_at IS NULL`),
     pool.query(`SELECT COUNT(*) FROM pos_audit_log WHERE created_at > now() - interval '24 hours'`),
+    pool.query(`SELECT COUNT(*) FROM pos_paid_outs WHERE synced_at IS NULL`),
     pool.query(`SELECT COUNT(*) FROM pos_sessions WHERE synced_at IS NULL`),
   ];
-  const [orders, lines, payments, clock, audit, sessions] = await Promise.all(queries);
+  const [orders, lines, payments, clock, audit, paid_outs, sessions] = await Promise.all(queries);
   stats.pending = {
     orders: parseInt(orders.rows[0].count),
     lines: parseInt(lines.rows[0].count),
     payments: parseInt(payments.rows[0].count),
     clock: parseInt(clock.rows[0].count),
     audit: parseInt(audit.rows[0].count),
+    paid_outs: parseInt(paid_outs.rows[0].count),
     sessions: parseInt(sessions.rows[0].count),
   };
 }
@@ -281,6 +317,7 @@ async function runSync() {
     total += await syncPayments();
     total += await syncClock();
     total += await syncAudit();
+    total += await syncPaidOuts();
     total += await syncSessions();
 
     stats.totalSynced += total;

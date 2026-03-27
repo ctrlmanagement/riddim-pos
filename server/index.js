@@ -37,6 +37,8 @@ const transactionsRouter = require('./routes/transactions');
 const auditRouter = require('./routes/audit');
 const reportsRouter = require('./routes/reports');
 const syncRouter = require('./routes/sync');
+const paidOutsRouter = require('./routes/paid-outs');
+const sessionsRouter = require('./routes/sessions');
 
 app.use('/api/orders', ordersRouter);
 app.use('/api/clock', clockRouter);
@@ -44,6 +46,8 @@ app.use('/api/transactions', transactionsRouter);
 app.use('/api/audit', auditRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/sync', syncRouter);
+app.use('/api/paid-outs', paidOutsRouter);
+app.use('/api/sessions', sessionsRouter);
 
 // Health check
 app.get('/api/health', async (req, res) => {

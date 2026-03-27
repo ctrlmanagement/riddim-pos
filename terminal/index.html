@@ -309,6 +309,10 @@
           <button class="rpt-tab" data-rpt="employee" onclick="switchReport('employee')">EMPLOYEE</button>
           <button class="rpt-tab" data-rpt="hourly" onclick="switchReport('hourly')">HOURLY</button>
           <button class="rpt-tab" data-rpt="station" onclick="switchReport('station')">STATION</button>
+          <button class="rpt-tab" data-rpt="dsr" onclick="switchReport('dsr')">DSR</button>
+          <button class="rpt-tab" data-rpt="checkout" onclick="switchReport('checkout')">CHECKOUT</button>
+          <button class="rpt-tab" data-rpt="paidouts" onclick="switchReport('paidouts')">PAID OUTS</button>
+          <button class="rpt-tab" data-rpt="custom" onclick="switchReport('custom')">CUSTOM</button>
         </div>
         <div id="rptContent" class="rpt-content"></div>
       </div>
@@ -691,6 +695,21 @@
   </div>
 </div>
 
+<!-- ════════════════════════════════════════
+     PAID OUT MODAL
+     ════════════════════════════════════════ -->
+<div id="paidOutModal" class="modal-overlay">
+  <div class="modal" style="width:520px">
+    <div class="modal-header">
+      <div class="modal-title">PAID OUT</div>
+      <button class="modal-close" onclick="closeModal('paidOutModal')">X</button>
+    </div>
+    <div class="modal-body" id="paidOutBody">
+      <!-- Steps rendered dynamically by JS -->
+    </div>
+  </div>
+</div>
+
 <!-- Socket.IO client — try local server first, fall back to CDN -->
 <script src="/socket.io/socket.io.js" onerror="
   var s=document.createElement('script');
@@ -730,6 +749,7 @@
 <script src="js/mgmt-staff.js"></script>
 <script src="js/mgmt-config.js"></script>
 <script src="js/mgmt-reports.js"></script>
+<script src="js/paid-outs.js"></script>
 <script src="js/mgmt-operations.js"></script>
 </body>
 </html>

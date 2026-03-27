@@ -138,6 +138,24 @@ CREATE TABLE IF NOT EXISTS pos_audit_log (
 CREATE INDEX idx_audit_type ON pos_audit_log(audit_type);
 CREATE INDEX idx_audit_date ON pos_audit_log(created_at);
 
+-- Paid outs (cash expenditures recorded during shift)
+CREATE TABLE IF NOT EXISTS pos_paid_outs (
+    id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    session_id      uuid REFERENCES pos_sessions(id),
+    category        text NOT NULL,                  -- maps to daily_payouts label
+    amount          numeric(10,2) NOT NULL,
+    notes           text,
+    staff_id        uuid NOT NULL,
+    staff_name      text NOT NULL,                  -- denormalized
+    station_code    text,
+    recorded_at     timestamptz DEFAULT now(),
+    synced_at       timestamptz,
+    created_at      timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_paid_outs_session ON pos_paid_outs(session_id);
+CREATE INDEX idx_paid_outs_date ON pos_paid_outs(recorded_at);
+
 -- KDS routing rules (which categories go to which display)
 CREATE TABLE IF NOT EXISTS pos_kds_routes (
     id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
