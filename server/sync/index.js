@@ -81,13 +81,13 @@ async function syncOrders() {
 
 // ── SYNC ORDER LINES ─────────────────────────────────────────
 async function syncOrderLines() {
-  // Sync lines whose parent order has been synced (parent must exist in cloud)
-  // Lines don't have synced_at — upsert is idempotent via ON CONFLICT id
+  // Sync lines for orders synced in the last 2 minutes (catches newly-synced orders
+  // then stops re-pushing). Upsert is idempotent via ON CONFLICT id.
   const { rows: lines } = await pool.query(
     `SELECT l.* FROM pos_order_lines l
      JOIN pos_orders o ON o.id = l.order_id
      WHERE o.synced_at IS NOT NULL
-       AND o.updated_at > o.synced_at - interval '1 minute'
+       AND o.synced_at > now() - interval '2 minutes'
      ORDER BY l.created_at LIMIT $1`,
     [BATCH_SIZE]
   );
@@ -123,10 +123,12 @@ async function syncOrderLines() {
 
 // ── SYNC PAYMENTS ────────────────────────────────────────────
 async function syncPayments() {
+  // Only sync payments for orders synced in the last 2 minutes
   const { rows } = await pool.query(
     `SELECT p.* FROM pos_payments p
      JOIN pos_orders o ON o.id = p.order_id
      WHERE o.synced_at IS NOT NULL
+       AND o.synced_at > now() - interval '2 minutes'
      ORDER BY p.created_at LIMIT $1`,
     [BATCH_SIZE]
   );
