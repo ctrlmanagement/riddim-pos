@@ -124,8 +124,9 @@ router.post('/close', async (req, res) => {
       }
     });
 
-    // Cash Deposit = cash sales - paid outs
-    payoutRows.push({ label: 'Cash Deposit', amount: parseFloat(payments.cash_sales) - totalPaidOuts });
+    // Cash Deposit = cash sales + cash tips - paid outs (actual cash in drawer)
+    const cashInDrawer = parseFloat(payments.cash_sales) + parseFloat(payments.cash_tips);
+    payoutRows.push({ label: 'Cash Deposit', amount: cashInDrawer - totalPaidOuts });
 
     // Expense rows from paid outs (category → daily_payouts label)
     paidOuts.forEach(po => {
@@ -182,7 +183,7 @@ router.post('/close', async (req, res) => {
         order_count: parseInt(sales.order_count),
         void_count: parseInt(sales.void_count),
         paid_outs: totalPaidOuts,
-        cash_deposit: parseFloat(payments.cash_sales) - totalPaidOuts,
+        cash_deposit: cashInDrawer - totalPaidOuts,
       },
       daily_payouts: payoutRows,
       sync: syncResult,
