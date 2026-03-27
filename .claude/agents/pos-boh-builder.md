@@ -23,7 +23,10 @@ riddim-pos/
 │                               # tables, eightysix, editcheck, clock, seats,
 │                               # management (router), mgmt-* (6 modules)
 ├── kds/                        # Kitchen/bar display (planned — Phase 4)
-├── server/                     # Local Node.js server ✅ S78 (Express + Socket.IO + PG)
+├── server/                     # Local Node.js server ✅ S78+ (Express + Socket.IO + PG + pdfkit)
+│   ├── routes/                 # orders, clock, transactions, audit, reports, sync, paid-outs, sessions
+│   ├── reports/                # PDF renderer + composers (pdf-renderer, pdf-dsr, pdf-checkout, pdf-paid-outs, pdf-custom)
+│   ├── sync/                   # Supabase sync daemon (30s cycle, 7 data types)
 ├── docs/
 ├── _briefings/
 ├── build.sh                    # CSS concat (no npm)
@@ -147,8 +150,14 @@ BOH uses the same design tokens as the terminal but optimized for desktop/laptop
 4. ~~**Employee Reports**~~ ✅ S78 — sales, tips, items, hours, $/hour per server
 5. ~~**Menu Item Analytics**~~ ✅ S78 — product mix with qty, revenue, % mix, comp/void counts
 6. ~~**Operating Dashboard**~~ ✅ S78 — summary report with gross/net sales, tax, tips, avg check, comps, voided
-7. **Daily Summary → P&L** — auto-write to daily_payouts at day close (Phase 6)
-8. **EMV/Payment Reports** — pending Stripe Terminal integration (Phase 3)
+7. ~~**Daily Summary → P&L**~~ ✅ S81 — closeDay() writes 11 DSR fields + expense rows + collections to daily_payouts
+8. ~~**DSR Report**~~ ✅ S81 — full daily summary: sales, payments, expenditures, cash reconciliation, comps, voids
+9. ~~**Paid Out Summary**~~ ✅ S81 — grouped by category with line items, grand total
+10. ~~**Server Checkout Report**~~ ✅ S81 — per-server shift report: sales, tips, cash due, items sold
+11. ~~**Custom Report Builder**~~ ✅ S81 — 13 toggleable sections, saved presets, date range, preview + PDF export
+12. ~~**PDF Export Engine**~~ ✅ S81 — pdfkit-based branded renderer, endpoints for DSR/checkout/paid-outs/custom
+13. **Report Security Gating** — permission keys for terminal report tabs (mgmt.view_dsr, mgmt.view_employee_report)
+14. **EMV/Payment Reports** — pending Stripe Terminal integration (Phase 3)
 
 ---
 
@@ -156,7 +165,7 @@ BOH uses the same design tokens as the terminal but optimized for desktop/laptop
 
 | Aspect | FOH (Terminal) | BOH (Back Office) |
 |---|---|---|
-| Target device | Sunmi T3 tablet (1920x1080 touch) | Desktop/laptop browser |
+| Target device | Elo EloPOS 22" Linux AIO (1920x1080 touch) | Desktop/laptop browser |
 | Layout | Touch-optimized, single-page | Desktop nav, multi-page feel |
 | Data scope | Current session (in-memory + local PG) | Historical (local PG via REST API + Supabase) |
 | Write access | Orders, tabs, payments, clock | Menu config, security groups, reports |

@@ -7,11 +7,11 @@
 
 ### Stack
 - **Terminal UI:** Single-page HTML/CSS/JS served by local server (no framework, no build step)
-- **Files:** `terminal/index.html`, 19 JS modules in `terminal/js/`, 19 CSS partials in `terminal/css/`
+- **Files:** `terminal/index.html`, 20 JS modules in `terminal/js/`, 16 CSS partials in `terminal/css/`
 - **Local Server:** Node.js + Express + Socket.IO on port 3000 (`server/index.js`)
 - **Local DB:** PostgreSQL 16 (`riddim_pos`) — orders, payments, audit, clock
 - **Cloud DB:** Supabase (`cbvryfgrqzdvbqigyrgh`) — menu, staff, security groups, config
-- **Target hardware:** Sunmi T3 Pro Max (1920x1080 landscape), also runs in desktop browser for dev
+- **Target hardware:** Elo EloPOS 22" Linux AIO (1920x1080 landscape), also runs in desktop browser for dev
 - **Server link:** `terminal/js/server-link.js` — auto-detects local server, mirrors all actions to REST API + Socket.IO
 
 ### Key POS Tables (Supabase)
@@ -109,7 +109,9 @@ BAR4 (Bar 4, POS 4), BAR5 (SVC, POS 7), LR (Liquor Room, no POS)
 | Bottle service flow | Done S76 | Guest count +/-, min spend progress bar from table_minimums |
 | Guest/seat numbers | Done S76 | Seat selector bar (ALL, 1-8), lines tagged per seat |
 | Clock in/out | Done S76 | PIN-based, shift tracking, checkout gate before clock-out |
-| FOH reports | Done S76 | 5 types: summary, product, employee, hourly, station |
+| FOH reports | Done S76/S81 | 9 types: summary, product, employee, hourly, station, DSR, checkout, paid outs, custom |
+| Paid out recording | Done S81 | 3-step flow: numpad → category (21) → notes. Day close section shows list + totals |
+| Day close P&L export | Done S81 | closeDay() writes 11 DSR fields + expenses + collections to Supabase daily_payouts |
 | Server link | Done S78 | Socket.IO + REST to local server, auto-detect, SERVER/OFFLINE badge |
 | Permission gating | Done S78 | hasPermission() checks on all actions, UI hides unauthorized buttons |
 | Member lookup | Done S79 | Phone search (.ilike), tier badges, links member_id to tab |

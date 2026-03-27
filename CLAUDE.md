@@ -128,5 +128,6 @@ Phase 2: Local server — COMPLETE (S78)
 Phase 2.5: RIDDIM integration — COMPLETE (S79) — table_sessions, reservations, members, deposits
 Phase 3: Payment — Stripe Terminal integration
 Phase 4: KDS — kitchen/bar display routing
-Phase 5: Sync — local PG ↔ Supabase bidirectional
-Phase 6: Integration — inventory, P&L auto-connect
+Phase 5: Sync — COMPLETE (S80) — local PG → Supabase every 30s, 7 data types
+Phase 5.5: Paid outs + P&L export — COMPLETE (S81) — paid out recording, day close → daily_payouts, reports, PDF engine
+Phase 6: Integration — inventory, P&L auto-connect (core P&L done, inventory pending)
