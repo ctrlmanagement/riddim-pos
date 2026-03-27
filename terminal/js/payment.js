@@ -214,16 +214,15 @@ async function submitPayment() {
   // Payment #2: Balance (card/cash/comp — if any remaining)
   if (balanceDue > 0 && typeof serverPayOrder === 'function') {
     await serverPayOrder(tab, selectedPayMethod, balanceDue, tab.tipAmount || 0);
-  } else if (usedDeposit > 0 && balanceDue === 0) {
-    // Deposit covered everything — still need to close the order on server
-    if (tab.serverId) {
-      await serverPost(`/api/orders/${tab.serverId}/pay`, {
-        method: 'deposit',
-        amount: 0,
-        tip_amount: tab.tipAmount || 0,
-        processed_by: currentUser.id,
-      });
-    }
+  } else if (tab.serverId) {
+    // $0 balance — deposit covered everything, or fully comped, or empty tab
+    // Always create a payment record so order moves to 'paid' and gets a sale_num
+    await serverPost(`/api/orders/${tab.serverId}/pay`, {
+      method: usedDeposit > 0 ? 'deposit' : (selectedPayMethod || 'comp'),
+      amount: 0,
+      tip_amount: tab.tipAmount || 0,
+      processed_by: currentUser.id,
+    });
   }
 
   // ── RIDDIM INTEGRATION: Close table session + booking ──

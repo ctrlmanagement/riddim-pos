@@ -117,8 +117,9 @@ async function serverPost(path, body) {
       body: JSON.stringify(body),
     });
     if (!res.ok) {
-      console.error('Server POST failed:', path, res.status);
-      return null;
+      const errBody = await res.json().catch(() => ({}));
+      console.error('Server POST failed:', path, res.status, errBody);
+      return errBody.error ? { error: errBody.error } : null;
     }
     return await res.json();
   } catch (err) {
