@@ -26,7 +26,7 @@ pos_stations        — id, code, label, pos_name, active
 ```
 staff               — id, first_name, last_name, role, pos_pin, pos_role, security_group_id, active
 pos_security_groups — id, name, description, is_default
-pos_security_permissions — id, group_id, permission, enabled (39 permissions per group)
+pos_security_permissions — id, group_id, permission, enabled (40 permissions per group)
 table_sessions      — table_number, guest_name, party_size, server_name, status, booking_id
 table_bookings      — table_number, guest_name, party_size, status
 inv_products        — id, name, pos_item_id (FK bridge to POS menu)
@@ -109,11 +109,11 @@ BAR4 (Bar 4, POS 4), BAR5 (SVC, POS 7), LR (Liquor Room, no POS)
 | Bottle service flow | Done S76 | Guest count +/-, min spend progress bar from table_minimums |
 | Guest/seat numbers | Done S76 | Seat selector bar (ALL, 1-8), lines tagged per seat |
 | Clock in/out | Done S76 | PIN-based, shift tracking, checkout gate before clock-out |
-| FOH reports | Done S76/S81 | 9 types: summary, product, employee, hourly, station, DSR, checkout, paid outs, custom |
+| FOH reports | Done S76/S81/S82 | 9 types: summary, product, employee, hourly, station, DSR, checkout, paid outs, custom. Per-tab permission gating (S82). |
 | Paid out recording | Done S81 | 3-step flow: numpad → category (21) → notes. Day close section shows list + totals |
 | Day close P&L export | Done S81 | closeDay() writes 11 DSR fields + expenses + collections to Supabase daily_payouts |
 | Server link | Done S78 | Socket.IO + REST to local server, auto-detect, SERVER/OFFLINE badge |
-| Permission gating | Done S78 | hasPermission() checks on all actions, UI hides unauthorized buttons |
+| Permission gating | Done S78/S82 | hasPermission() checks on all actions, UI hides unauthorized buttons. Report tabs gated by tier (S82): DSR/PaidOuts/Custom=mgmt.view_dsr, Employee/Checkout=mgmt.view_employee_reports, Sales tabs=mgmt.view_sales |
 | Member lookup | Done S79 | Phone search (.ilike), tier badges, links member_id to tab |
 | Reservation seating | Done S79 | RESERVATIONS panel, SEAT button, creates session + tab with deposit |
 | Deposit split payment | Done S79 | Deposit = payment #1, balance = card/cash. Unused → OTHER INCOME |

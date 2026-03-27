@@ -159,7 +159,7 @@ function applyPermissionUI() {
     'categories': 'mgmt.edit_menu',
     'staff': 'mgmt.edit_config',
     'stations': 'mgmt.edit_config',
-    'reports': 'mgmt.view_sales',
+    'reports': ['mgmt.view_sales', 'mgmt.view_employee_reports', 'mgmt.view_dsr'],
     'servers': 'mgmt.view_servers',
     'clock': 'clock.view_others',
     'checks': 'pay.change_tip',
@@ -168,8 +168,37 @@ function applyPermissionUI() {
   };
   Object.entries(mgmtSections).forEach(([section, perm]) => {
     const btn = document.querySelector(`.mgmt-nav-btn[data-mgmt="${section}"]`);
-    if (btn) btn.style.display = hasPermission(perm) ? '' : 'none';
+    if (!btn) return;
+    const allowed = Array.isArray(perm) ? perm.some(p => hasPermission(p)) : hasPermission(perm);
+    btn.style.display = allowed ? '' : 'none';
   });
+
+  // Report tab gating — each tab requires a specific permission tier
+  const reportTabPerms = {
+    'summary': 'mgmt.view_sales',
+    'product': 'mgmt.view_sales',
+    'hourly': 'mgmt.view_sales',
+    'station': 'mgmt.view_sales',
+    'employee': 'mgmt.view_employee_reports',
+    'checkout': 'mgmt.view_employee_reports',
+    'dsr': 'mgmt.view_dsr',
+    'paidouts': 'mgmt.view_dsr',
+    'custom': 'mgmt.view_dsr',
+  };
+  let firstVisible = null;
+  document.querySelectorAll('.rpt-tab').forEach(tab => {
+    const rpt = tab.getAttribute('data-rpt');
+    const perm = reportTabPerms[rpt];
+    const show = perm ? hasPermission(perm) : true;
+    tab.style.display = show ? '' : 'none';
+    if (show && !firstVisible) firstVisible = rpt;
+  });
+  // Reset active tab to first visible
+  if (firstVisible) {
+    document.querySelectorAll('.rpt-tab').forEach(t => t.classList.remove('active'));
+    const first = document.querySelector(`.rpt-tab[data-rpt="${firstVisible}"]`);
+    if (first) first.classList.add('active');
+  }
 }
 
 function logout() {

@@ -9,6 +9,7 @@
 - [ ] No Supabase service role key (only anon/publishable key allowed in terminal code)
 - [ ] No card data stored — only PaymentIntent IDs from Stripe Terminal
 - [ ] Manager PIN checks on void, comp, discount, reopen (check `CONFIG.require_manager_*`)
+- [ ] Report tabs gated by permission tier: DSR/PaidOuts/Custom=`mgmt.view_dsr`, Employee/Checkout=`mgmt.view_employee_reports`, Sales=`mgmt.view_sales`
 - [ ] No `eval()`, no `innerHTML` with unsanitized user input, no XSS vectors
 - [ ] PIN buffer cleared after login attempt (success or failure)
 - [ ] No secrets, API keys, or credentials beyond the publishable Supabase key

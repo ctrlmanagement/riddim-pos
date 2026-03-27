@@ -152,3 +152,4 @@ Owner picks sections from a checklist. Each section maps to a data query + PDF r
 8. **Negative values in red.** Cash over/short, refunds, voids — always red text.
 9. **Right-align all currency columns.** Left-align labels.
 10. **Fallback fonts.** PDFs can't load web fonts by default — use Helvetica/Times as fallbacks unless fonts are embedded.
+11. **Report tabs are permission-gated (S82).** DSR/Paid Outs/Custom require `mgmt.view_dsr`. Employee/Checkout require `mgmt.view_employee_reports`. Sales tabs require `mgmt.view_sales`. Both UI hiding and `switchReport()` enforce this.

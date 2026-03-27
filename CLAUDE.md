@@ -109,6 +109,7 @@ const BAR_CONFIG = [
 11. **tab.reopen_deposit is separate from tab.reopen.** Owner-only by default. (S79)
 12. **booking_id stored on pos_orders.** Required for deposit to survive terminal restart. (S79)
 13. **Reopen permissions checked live from Supabase.** Not from login-time cache. (S79)
+14. **Report tabs gated by permission tier.** DSR/Paid Outs/Custom = `mgmt.view_dsr`, Employee/Checkout = `mgmt.view_employee_reports`, Summary/Product/Hourly/Station = `mgmt.view_sales`. (S82)
 
 ## Research Briefs
 Located at `~/ctrl/riddimsupperclub/_briefings/pos-system/`:
@@ -130,4 +131,5 @@ Phase 3: Payment — Stripe Terminal integration
 Phase 4: KDS — kitchen/bar display routing
 Phase 5: Sync — COMPLETE (S80) — local PG → Supabase every 30s, 7 data types
 Phase 5.5: Paid outs + P&L export — COMPLETE (S81) — paid out recording, day close → daily_payouts, reports, PDF engine
+Phase 5.6: Report security gating — COMPLETE (S82) — per-tab permission tiers, mgmt.view_dsr permission key
 Phase 6: Integration — inventory, P&L auto-connect (core P&L done, inventory pending)

@@ -168,16 +168,4 @@ pos_paid_outs_sync — mirror of pos_paid_outs, RLS: public read, service_role w
 
 ## What's Next
 
-> **Resume at commit `e35a419` (riddim-pos) / `d0c45b2` (riddimsupperclub) on main.**
-
-### Immediate (next session priority)
-1. **Report security gating** — add permission keys for terminal report tabs. DSR/Paid Outs/Custom = manager/owner only (`mgmt.view_dsr`). Employee reports = manager+ (`mgmt.view_employee_report`). Summary/Product Mix/Hourly/Station = existing `mgmt.view_sales`. Add to `pos_security_permissions` and `applyPermissionUI()`.
-2. **Supabase table creation** — `pos_paid_outs_sync` table needs to be created in Supabase
-
-### Deferred
-3. **KDS (Phase 4)** — kitchen/bar display
-4. **Stripe Terminal (Phase 3)** — card reader integration with S700
-5. **Fingerprint auth build** — libfprint agent, enrollment flow
-6. **Thermal printer receipts** — ESC/POS for checkout slips, paid out receipts on terminal
-7. **P&L Integration (Phase 6)** — auto-write daily_payouts at day close (core done, needs field refinement)
-8. **Inventory Integration (Phase 6)** — sales → theoretical usage
+> **Completed in S82.** Report security gating and `mgmt.view_dsr` permission done. See `S82_Report_Security_Gating_2026-03-27.md`.

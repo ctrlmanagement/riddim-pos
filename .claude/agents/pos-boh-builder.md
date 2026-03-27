@@ -156,7 +156,7 @@ BOH uses the same design tokens as the terminal but optimized for desktop/laptop
 10. ~~**Server Checkout Report**~~ ✅ S81 — per-server shift report: sales, tips, cash due, items sold
 11. ~~**Custom Report Builder**~~ ✅ S81 — 13 toggleable sections, saved presets, date range, preview + PDF export
 12. ~~**PDF Export Engine**~~ ✅ S81 — pdfkit-based branded renderer, endpoints for DSR/checkout/paid-outs/custom
-13. **Report Security Gating** — permission keys for terminal report tabs (mgmt.view_dsr, mgmt.view_employee_report)
+13. ~~**Report Security Gating**~~ ✅ S82 — per-tab permission tiers: DSR/PaidOuts/Custom=mgmt.view_dsr, Employee/Checkout=mgmt.view_employee_reports, Sales=mgmt.view_sales
 14. **EMV/Payment Reports** — pending Stripe Terminal integration (Phase 3)
 
 ---

@@ -5,7 +5,22 @@
 // FOH REPORTS
 // ═══════════════════════════════════════════
 
+// Permission tier for each report tab
+const REPORT_TAB_PERMS = {
+  summary: 'mgmt.view_sales',
+  product: 'mgmt.view_sales',
+  hourly: 'mgmt.view_sales',
+  station: 'mgmt.view_sales',
+  employee: 'mgmt.view_employee_reports',
+  checkout: 'mgmt.view_employee_reports',
+  dsr: 'mgmt.view_dsr',
+  paidouts: 'mgmt.view_dsr',
+  custom: 'mgmt.view_dsr',
+};
+
 function switchReport(type) {
+  const perm = REPORT_TAB_PERMS[type];
+  if (perm && !hasPermission(perm)) return;
   document.querySelectorAll('.rpt-tab').forEach(t => t.classList.remove('active'));
   const btn = document.querySelector(`.rpt-tab[data-rpt="${type}"]`);
   if (btn) btn.classList.add('active');
