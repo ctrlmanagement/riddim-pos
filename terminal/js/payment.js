@@ -212,8 +212,11 @@ async function submitPayment() {
   }
 
   // Payment #2: Balance (card/cash/comp — if any remaining)
+  // balanceDue includes tip — split it out so amount = sale only, tip_amount = tip only
+  const tipForPayment = tab.tipAmount || 0;
+  const saleAmount = Math.max(0, balanceDue - tipForPayment);
   if (balanceDue > 0 && typeof serverPayOrder === 'function') {
-    await serverPayOrder(tab, selectedPayMethod, balanceDue, tab.tipAmount || 0);
+    await serverPayOrder(tab, selectedPayMethod, saleAmount, tipForPayment);
   } else if (tab.serverId) {
     // $0 balance — deposit covered everything, or fully comped, or empty tab
     // Always create a payment record so order moves to 'paid' and gets a sale_num
