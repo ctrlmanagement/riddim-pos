@@ -36,18 +36,26 @@ const clockRouter = require('./routes/clock');
 const transactionsRouter = require('./routes/transactions');
 const auditRouter = require('./routes/audit');
 const reportsRouter = require('./routes/reports');
+const syncRouter = require('./routes/sync');
 
 app.use('/api/orders', ordersRouter);
 app.use('/api/clock', clockRouter);
 app.use('/api/transactions', transactionsRouter);
 app.use('/api/audit', auditRouter);
 app.use('/api/reports', reportsRouter);
+app.use('/api/sync', syncRouter);
 
 // Health check
 app.get('/api/health', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT now()');
-    res.json({ status: 'ok', time: rows[0].now, uptime: process.uptime() });
+    const syncStats = require('./sync').getStats();
+    res.json({
+      status: 'ok',
+      time: rows[0].now,
+      uptime: process.uptime(),
+      sync: { enabled: syncStats.enabled, lastSync: syncStats.lastSuccessAt, pending: syncStats.pending },
+    });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
   }
@@ -57,6 +65,9 @@ app.get('/api/health', async (req, res) => {
 const terminalSocket = require('./sockets/terminal');
 terminalSocket(io);
 
+// ── SYNC DAEMON ─────────────────────────────────────────────
+const sync = require('./sync');
+
 // ── START ───────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 
@@ -65,4 +76,6 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`  Terminal: http://localhost:${PORT}/terminal/`);
   console.log(`  KDS:      http://localhost:${PORT}/kds/`);
   console.log(`  API:      http://localhost:${PORT}/api/health`);
+  console.log(`  Sync:     http://localhost:${PORT}/api/sync/status`);
+  sync.start();
 });
