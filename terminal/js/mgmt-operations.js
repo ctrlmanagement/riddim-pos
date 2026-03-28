@@ -477,6 +477,27 @@ async function renderMgmtDayClose() {
       }
     </div>
 
+    <!-- Cash Deposit -->
+    <div style="margin-top:20px;background:var(--obsidian-mid);border:1px solid var(--surface);border-radius:var(--radius-lg);padding:16px">
+      <div style="font-family:var(--font-label);font-size:14px;color:var(--gold);letter-spacing:2px;margin-bottom:12px">CASH DEPOSIT</div>
+      <div class="dayclose-row">
+        <span>Expected (Net Cash)</span>
+        <span>$${netCash.toFixed(2)}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+        <label style="font-family:var(--font-label);font-size:12px;color:var(--ash);letter-spacing:1px;white-space:nowrap">COUNTED CASH $</label>
+        <input type="number" id="closeDayCashDeposit" step="0.01" min="0" placeholder="0.00" value="${netCash.toFixed(2)}"
+               style="width:140px;height:40px;padding:0 10px;border:1px solid var(--surface);border-radius:var(--radius);background:var(--obsidian);color:var(--ivory);font-size:18px;font-family:var(--font-body)" oninput="updateCashDifference()">
+        <span id="cashDiffDisplay" style="font-family:var(--font-label);font-size:13px;letter-spacing:1px"></span>
+      </div>
+    </div>
+
+    <!-- Settle Credit Cards (placeholder) -->
+    <div style="margin-top:16px;background:var(--obsidian-mid);border:1px solid var(--surface);border-radius:var(--radius-lg);padding:16px;opacity:0.5">
+      <div style="font-family:var(--font-label);font-size:14px;color:var(--gold);letter-spacing:2px;margin-bottom:8px">SETTLE CREDIT CARDS</div>
+      <div style="font-size:13px;color:var(--ash)">Merchant processor not active. Card settlement will be configured when Stripe Terminal is connected.</div>
+    </div>
+
     ${openTabs.length > 0 ? '<div class="dayclose-warning" style="margin-top:20px">Close all open tabs before closing the day</div>' : `
       <div class="form-actions" style="margin-top:20px">
         <button class="mgmt-action-btn" onclick="closeDay()">CLOSE DAY</button>
@@ -485,13 +506,40 @@ async function renderMgmtDayClose() {
   `;
 }
 
+function updateCashDifference() {
+  const input = document.getElementById('closeDayCashDeposit');
+  const display = document.getElementById('cashDiffDisplay');
+  if (!input || !display) return;
+  const counted = parseFloat(input.value) || 0;
+  // Get expected from the NET CASH row
+  const closedTabs = tabs.filter(t => t.status === 'closed');
+  let cashSales = 0;
+  closedTabs.forEach(t => {
+    if (t.payMethod === 'cash') cashSales += tabSubtotal(t) + tabTax(t);
+  });
+  const expected = cashSales - paidOutsTotal;
+  const diff = counted - expected;
+  if (Math.abs(diff) < 0.01) {
+    display.textContent = '';
+  } else if (diff > 0) {
+    display.textContent = '$' + diff.toFixed(2) + ' OVER';
+    display.style.color = 'var(--green)';
+  } else {
+    display.textContent = '$' + Math.abs(diff).toFixed(2) + ' SHORT';
+    display.style.color = 'var(--red)';
+  }
+}
+
 async function closeDay() {
   // Confirm
   if (!await posConfirm('Close the day? This will finalize all sales data and cannot be undone.')) return;
 
+  const cashDeposit = parseFloat(document.getElementById('closeDayCashDeposit')?.value) || 0;
+
   const result = await serverPost('/api/sessions/close', {
     closed_by: currentUser.id,
     closed_by_name: currentUser.name,
+    cash_deposit: cashDeposit,
   });
 
   if (!result) {

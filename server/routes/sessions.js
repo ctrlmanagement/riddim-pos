@@ -10,7 +10,7 @@ const DAY_NAMES = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
 // ── CLOSE DAY — aggregate POS data and push to daily_payouts ──
 router.post('/close', async (req, res) => {
   try {
-    const { closed_by, closed_by_name, date } = req.body;
+    const { closed_by, closed_by_name, date, cash_deposit: manualCashDeposit } = req.body;
     const businessDate = date || new Date().toISOString().slice(0, 10);
 
     if (!closed_by) {
@@ -124,9 +124,13 @@ router.post('/close', async (req, res) => {
       }
     });
 
-    // Cash Deposit = cash sales + cash tips - paid outs (actual cash in drawer)
+    // Cash Deposit — use manually entered amount if provided, otherwise calculate
     const cashInDrawer = parseFloat(payments.cash_sales) + parseFloat(payments.cash_tips);
-    payoutRows.push({ label: 'Cash Deposit', amount: cashInDrawer - totalPaidOuts });
+    const calculatedDeposit = cashInDrawer - totalPaidOuts;
+    const cashDeposit = (manualCashDeposit !== undefined && manualCashDeposit !== null)
+      ? parseFloat(manualCashDeposit)
+      : calculatedDeposit;
+    payoutRows.push({ label: 'Cash Deposit', amount: cashDeposit });
 
     // Expense rows from paid outs (category → daily_payouts label)
     paidOuts.forEach(po => {
@@ -183,7 +187,7 @@ router.post('/close', async (req, res) => {
         order_count: parseInt(sales.order_count),
         void_count: parseInt(sales.void_count),
         paid_outs: totalPaidOuts,
-        cash_deposit: cashInDrawer - totalPaidOuts,
+        cash_deposit: cashDeposit,
       },
       daily_payouts: payoutRows,
       sync: syncResult,
