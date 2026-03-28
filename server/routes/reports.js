@@ -7,6 +7,9 @@ const pdfDSR = require('../reports/pdf-dsr');
 const pdfCheckout = require('../reports/pdf-checkout');
 const pdfPaidOuts = require('../reports/pdf-paid-outs');
 const pdfCustom = require('../reports/pdf-custom');
+const pdfSummary = require('../reports/pdf-summary');
+const pdfTransactions = require('../reports/pdf-transactions');
+const pdfAudit = require('../reports/pdf-audit');
 
 // All reports accept ?date_from=...&date_to=... (defaults to today)
 function dateParams(query) {
@@ -769,6 +772,156 @@ router.get('/paid-out-summary/pdf', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ── Summary PDF ──
+router.get('/summary/pdf', async (req, res) => {
+  try {
+    const { from, to } = dateParams(req.query);
+    const { rows: [stats] } = await pool.query(`
+      SELECT
+        COUNT(DISTINCT o.id) FILTER (WHERE o.state IN ('paid','closed')) as checks_closed,
+        COUNT(DISTINCT o.id) FILTER (WHERE o.state = 'voided') as checks_voided,
+        COALESCE(SUM(DISTINCT o.subtotal) FILTER (WHERE o.state IN ('paid','closed')), 0) as gross_sales,
+        COALESCE(SUM(DISTINCT o.tax_amount) FILTER (WHERE o.state IN ('paid','closed')), 0) as tax,
+        COALESCE(SUM(DISTINCT o.total) FILTER (WHERE o.state IN ('paid','closed')), 0) as total_with_tax,
+        COALESCE(SUM(p.tip_amount) FILTER (WHERE o.state IN ('paid','closed')), 0) as tips,
+        COUNT(DISTINCT o.id) FILTER (WHERE p.method = 'card' AND o.state IN ('paid','closed')) as card_count,
+        COUNT(DISTINCT o.id) FILTER (WHERE p.method = 'cash' AND o.state IN ('paid','closed')) as cash_count,
+        COUNT(DISTINCT o.id) FILTER (WHERE p.method = 'comp' AND o.state IN ('paid','closed')) as comp_count,
+        COALESCE(SUM(p.amount) FILTER (WHERE p.method = 'card'), 0) as card_sales,
+        COALESCE(SUM(p.amount) FILTER (WHERE p.method = 'cash'), 0) as cash_sales,
+        COALESCE(SUM(p.amount) FILTER (WHERE p.method = 'comp'), 0) as comp_sales,
+        COALESCE(SUM(p.tip_amount) FILTER (WHERE p.method = 'card'), 0) as card_tips,
+        COALESCE(SUM(p.tip_amount) FILTER (WHERE p.method = 'cash'), 0) as cash_tips
+      FROM pos_orders o LEFT JOIN pos_payments p ON p.order_id = o.id
+      WHERE o.opened_at::date >= $1 AND o.opened_at::date <= $2
+    `, [from, to]);
+    const { rows: [ls] } = await pool.query(`
+      SELECT COALESCE(SUM(l.price * l.qty) FILTER (WHERE l.state = 'comped'), 0) as comp_amount,
+        COUNT(*) FILTER (WHERE l.state = 'comped') as comp_items,
+        COUNT(*) FILTER (WHERE l.state = 'voided') as void_items
+      FROM pos_order_lines l JOIN pos_orders o ON o.id = l.order_id
+      WHERE o.opened_at::date >= $1 AND o.opened_at::date <= $2
+    `, [from, to]);
+    const cc = parseInt(stats.checks_closed);
+    const gs = parseFloat(stats.gross_sales);
+    const tx = parseFloat(stats.tax);
+    const ca = parseFloat(ls.comp_amount);
+    const ns = gs - ca;
+    const data = {
+      date_from: from, date_to: to,
+      gross_sales: gs, net_sales: ns, tax: tx, tips: parseFloat(stats.tips),
+      checks_closed: cc, checks_voided: parseInt(stats.checks_voided), avg_check: cc > 0 ? (ns + tx) / cc : 0,
+      comp_amount: ca, comp_items: parseInt(ls.comp_items),
+      card: { count: parseInt(stats.card_count), sales: parseFloat(stats.card_sales), tips: parseFloat(stats.card_tips) },
+      cash: { count: parseInt(stats.cash_count), sales: parseFloat(stats.cash_sales), tips: parseFloat(stats.cash_tips) },
+      comp: { count: parseInt(stats.comp_count), sales: parseFloat(stats.comp_sales) },
+    };
+    const doc = pdfSummary.generateSummary(data);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="RIDDIM_Summary_${from}.pdf"`);
+    doc.pipe(res);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Product Mix PDF ──
+router.get('/product-mix/pdf', async (req, res) => {
+  try {
+    const { from, to } = dateParams(req.query);
+    const { rows } = await pool.query(`
+      SELECT l.name, SUM(l.qty) as qty,
+        SUM(CASE WHEN l.state NOT IN ('voided','comped') THEN l.price * l.qty ELSE 0 END) as revenue,
+        SUM(CASE WHEN l.state = 'comped' THEN l.qty ELSE 0 END) as comped_qty,
+        SUM(CASE WHEN l.state = 'voided' THEN l.qty ELSE 0 END) as voided_qty
+      FROM pos_order_lines l JOIN pos_orders o ON o.id = l.order_id
+      WHERE o.opened_at::date >= $1 AND o.opened_at::date <= $2 AND o.state IN ('paid','closed','sent','held','open')
+      GROUP BY l.name ORDER BY revenue DESC
+    `, [from, to]);
+    const totalRevenue = rows.reduce((s, r) => s + parseFloat(r.revenue), 0);
+    const data = {
+      date_from: from, date_to: to, total_revenue: totalRevenue,
+      items: rows.map(r => ({ name: r.name, qty: parseInt(r.qty), revenue: parseFloat(r.revenue), pct: totalRevenue > 0 ? parseFloat(r.revenue) / totalRevenue * 100 : 0, comped_qty: parseInt(r.comped_qty), voided_qty: parseInt(r.voided_qty) })),
+    };
+    const doc = pdfSummary.generateProductMix(data);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="RIDDIM_ProductMix_${from}.pdf"`);
+    doc.pipe(res);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Employee PDF ──
+router.get('/employee/pdf', async (req, res) => {
+  try {
+    const { from, to } = dateParams(req.query);
+    const { rows } = await pool.query(`
+      SELECT o.server_id, o.server_name, COUNT(DISTINCT o.id) as tabs,
+        COALESCE(SUM(o.total), 0) as sales, COALESCE(SUM(p.tip_amount), 0) as tips,
+        COALESCE(SUM((SELECT SUM(l2.qty) FROM pos_order_lines l2 WHERE l2.order_id = o.id AND l2.state NOT IN ('voided'))), 0) as items
+      FROM pos_orders o LEFT JOIN pos_payments p ON p.order_id = o.id
+      WHERE o.opened_at::date >= $1 AND o.opened_at::date <= $2 AND o.state IN ('paid','closed')
+      GROUP BY o.server_id, o.server_name ORDER BY sales DESC
+    `, [from, to]);
+    const { rows: clockRows } = await pool.query(`
+      SELECT staff_id, SUM(EXTRACT(EPOCH FROM (COALESCE(clock_out, now()) - clock_in)) / 3600) as hours
+      FROM pos_clock_entries WHERE clock_in::date >= $1 AND clock_in::date <= $2 GROUP BY staff_id
+    `, [from, to]);
+    const clockMap = {};
+    clockRows.forEach(c => clockMap[c.staff_id] = parseFloat(c.hours));
+    const data = {
+      date_from: from, date_to: to,
+      employees: rows.map(r => ({ server_name: r.server_name, tabs: parseInt(r.tabs), items: parseInt(r.items), sales: parseFloat(r.sales), tips: parseFloat(r.tips), hours: clockMap[r.server_id] || 0 })),
+    };
+    const doc = pdfSummary.generateEmployee(data);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="RIDDIM_Employee_${from}.pdf"`);
+    doc.pipe(res);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Hourly PDF ──
+router.get('/hourly/pdf', async (req, res) => {
+  try {
+    const { from, to } = dateParams(req.query);
+    const { rows } = await pool.query(`
+      SELECT EXTRACT(HOUR FROM o.opened_at) as hour, COUNT(DISTINCT o.id) as tabs,
+        COALESCE(SUM(o.total), 0) as sales,
+        COALESCE(SUM((SELECT SUM(l2.qty) FROM pos_order_lines l2 WHERE l2.order_id = o.id AND l2.state NOT IN ('voided'))), 0) as items
+      FROM pos_orders o WHERE o.opened_at::date >= $1 AND o.opened_at::date <= $2 AND o.state IN ('paid','closed')
+      GROUP BY EXTRACT(HOUR FROM o.opened_at) ORDER BY hour
+    `, [from, to]);
+    const data = {
+      date_from: from, date_to: to,
+      hours: rows.map(r => ({ hour: parseInt(r.hour), label: ((parseInt(r.hour) % 12) || 12) + (parseInt(r.hour) < 12 ? ' AM' : ' PM'), tabs: parseInt(r.tabs), sales: parseFloat(r.sales), items: parseInt(r.items) })),
+    };
+    const doc = pdfSummary.generateHourly(data);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="RIDDIM_Hourly_${from}.pdf"`);
+    doc.pipe(res);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Station PDF ──
+router.get('/station/pdf', async (req, res) => {
+  try {
+    const { from, to } = dateParams(req.query);
+    const { rows } = await pool.query(`
+      SELECT o.station_code, COUNT(DISTINCT o.id) as tabs,
+        COALESCE(SUM(o.total), 0) as sales, COALESCE(SUM(p.tip_amount), 0) as tips,
+        COALESCE(SUM((SELECT SUM(l2.qty) FROM pos_order_lines l2 WHERE l2.order_id = o.id AND l2.state NOT IN ('voided'))), 0) as items
+      FROM pos_orders o LEFT JOIN pos_payments p ON p.order_id = o.id
+      WHERE o.opened_at::date >= $1 AND o.opened_at::date <= $2 AND o.state IN ('paid','closed')
+      GROUP BY o.station_code ORDER BY sales DESC
+    `, [from, to]);
+    const data = {
+      date_from: from, date_to: to,
+      stations: rows.map(r => ({ station: r.station_code, tabs: parseInt(r.tabs), items: parseInt(r.items), sales: parseFloat(r.sales), tips: parseFloat(r.tips) })),
+    };
+    const doc = pdfSummary.generateStation(data);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="RIDDIM_Station_${from}.pdf"`);
+    doc.pipe(res);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ═══════════════════════════════════════════════════════════════

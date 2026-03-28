@@ -199,6 +199,16 @@ function applyPermissionUI() {
   }
 }
 
+async function shutdownTerminal() {
+  if (!await posConfirm('Shut down this terminal? It will need to be physically powered back on.')) return;
+  try {
+    await serverPost('/api/terminal/shutdown', { terminal: TERMINAL_NAME });
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0A0A0A;color:#888;font-family:DM Sans,sans-serif;font-size:18px;">Shutting down...</div>';
+  } catch (e) {
+    showToast('Shutdown failed');
+  }
+}
+
 function logout() {
   currentUser = null;
   showScreen('login');

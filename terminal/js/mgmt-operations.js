@@ -486,7 +486,7 @@ async function renderMgmtDayClose() {
 
 async function closeDay() {
   // Confirm
-  if (!await posConfirm('Close the day and push P&L data to Supabase? This cannot be undone.')) return;
+  if (!await posConfirm('Close the day? This will finalize all sales data and cannot be undone.')) return;
 
   const result = await serverPost('/api/sessions/close', {
     closed_by: currentUser.id,
@@ -494,7 +494,7 @@ async function closeDay() {
   });
 
   if (!result) {
-    showToast('Day close failed — check server connection');
+    showToast('Close day cannot be completed at this time');
     return;
   }
 
@@ -505,9 +505,9 @@ async function closeDay() {
 
   const s = result.summary;
   const syncMsg = result.sync.pushed > 0
-    ? ` — ${result.sync.pushed} rows pushed to P&L`
+    ? ' — P&L data exported'
     : result.sync.errors.length > 0
-      ? ' — P&L sync pending (offline)'
+      ? ' — P&L export pending'
       : '';
 
   showToast(`Day closed: $${s.net_sales.toFixed(2)} net sales, $${s.paid_outs.toFixed(2)} paid outs${syncMsg}`);

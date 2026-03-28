@@ -89,6 +89,44 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ── Transaction PDF export ───────────────────────────────────
+const pdfTransactions = require('../reports/pdf-transactions');
+
+router.get('/export/pdf', async (req, res) => {
+  try {
+    const { date, date_from, date_to, server_id, sale_id, order_num, method, min, max } = req.query;
+    let query = `
+      SELECT o.id, o.order_num, o.tab_name, o.server_name, o.station_code, o.state,
+             o.total, o.opened_at, p.method, p.amount as pay_amount, p.tip_amount
+      FROM pos_orders o LEFT JOIN pos_payments p ON p.order_id = o.id WHERE 1=1
+    `;
+    const params = [];
+    if (date) { params.push(date); query += ` AND o.opened_at::date = $${params.length}`; }
+    if (date_from) { params.push(date_from); query += ` AND o.opened_at::date >= $${params.length}`; }
+    if (date_to) { params.push(date_to); query += ` AND o.opened_at::date <= $${params.length}`; }
+    if (server_id) { params.push(server_id); query += ` AND o.server_id = $${params.length}`; }
+    if (method) { params.push(method); query += ` AND p.method = $${params.length}`; }
+    query += ' ORDER BY o.opened_at DESC LIMIT 500';
+    const { rows } = await pool.query(query, params);
+
+    // Stats
+    const totalSales = rows.reduce((s, r) => s + parseFloat(r.pay_amount || r.total || 0), 0);
+    const totalTips = rows.reduce((s, r) => s + parseFloat(r.tip_amount || 0), 0);
+
+    const from = date_from || date || new Date().toISOString().slice(0, 10);
+    const to = date_to || date || new Date().toISOString().slice(0, 10);
+    const data = {
+      date_from: from, date_to: to,
+      transactions: rows,
+      stats: { total: rows.length, total_sales: totalSales, total_tips: totalTips },
+    };
+    const doc = pdfTransactions.generate(data);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="RIDDIM_Transactions_${from}.pdf"`);
+    doc.pipe(res);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ── GET single transaction detail ───────────────────────────
 router.get('/:id', async (req, res) => {
   try {

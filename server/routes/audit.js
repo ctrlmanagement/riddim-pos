@@ -170,6 +170,81 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// ── Audit PDF export ────────────────────────────────────────
+const pdfAudit = require('../reports/pdf-audit');
+
+router.get('/export/pdf', async (req, res) => {
+  try {
+    const { type, date_from, date_to } = req.query;
+    const from = date_from || new Date().toISOString().slice(0, 10);
+    const to = date_to || new Date().toISOString().slice(0, 10);
+
+    // Get stats
+    const voids = await pool.query(
+      `SELECT COUNT(*) as count, COALESCE(SUM(price * qty), 0) as total FROM pos_order_lines WHERE state = 'voided' AND voided_at::date >= $1 AND voided_at::date <= $2`, [from, to]
+    );
+    const comps = await pool.query(
+      `SELECT COUNT(*) as count, COALESCE(SUM(price * qty), 0) as total FROM pos_order_lines WHERE state = 'comped' AND comped_at::date >= $1 AND comped_at::date <= $2`, [from, to]
+    );
+    const tabVoids = await pool.query(
+      `SELECT COUNT(*) as count, COALESCE(SUM(total), 0) as total FROM pos_orders WHERE state = 'voided' AND voided_at::date >= $1 AND voided_at::date <= $2`, [from, to]
+    );
+    const discounts = await pool.query(
+      `SELECT COUNT(*) as count, COALESCE(SUM((detail->>'amount')::numeric), 0) as total FROM pos_audit_log WHERE audit_type = 'discount' AND created_at::date >= $1 AND created_at::date <= $2`, [from, to]
+    );
+    const priceOverrides = await pool.query(
+      `SELECT COUNT(*) as count FROM pos_audit_log WHERE audit_type = 'price_override' AND created_at::date >= $1 AND created_at::date <= $2`, [from, to]
+    );
+    const tipAdjusts = await pool.query(
+      `SELECT COUNT(*) as count FROM pos_audit_log WHERE audit_type = 'tip_adjust' AND created_at::date >= $1 AND created_at::date <= $2`, [from, to]
+    );
+
+    const stats = {
+      voids: { count: parseInt(voids.rows[0].count), total: parseFloat(voids.rows[0].total) },
+      comps: { count: parseInt(comps.rows[0].count), total: parseFloat(comps.rows[0].total) },
+      tab_voids: { count: parseInt(tabVoids.rows[0].count), total: parseFloat(tabVoids.rows[0].total) },
+      discounts: { count: parseInt(discounts.rows[0].count), total: parseFloat(discounts.rows[0].total) },
+      price_overrides: { count: parseInt(priceOverrides.rows[0].count) },
+      tip_adjusts: { count: parseInt(tipAdjusts.rows[0].count) },
+    };
+
+    // Get entries (reuse the main audit query)
+    let query = `
+      SELECT * FROM (
+        SELECT l.id, 'void' as audit_type, l.name as item_name, l.price, l.qty, l.void_reason as reason, l.voided_by as action_by, l.voided_at as action_at, o.order_num, o.tab_name, o.server_name, o.station_code, o.opened_at as order_date
+        FROM pos_order_lines l JOIN pos_orders o ON o.id = l.order_id WHERE l.state = 'voided' AND l.voided_at IS NOT NULL
+        UNION ALL
+        SELECT l.id, 'comp' as audit_type, l.name as item_name, l.price, l.qty, l.comp_reason as reason, l.comped_by as action_by, l.comped_at as action_at, o.order_num, o.tab_name, o.server_name, o.station_code, o.opened_at as order_date
+        FROM pos_order_lines l JOIN pos_orders o ON o.id = l.order_id WHERE l.state = 'comped' AND l.comped_at IS NOT NULL
+        UNION ALL
+        SELECT o.id, 'tab_void' as audit_type, o.tab_name as item_name, o.total as price, 1 as qty, o.void_reason as reason, o.voided_by as action_by, o.voided_at as action_at, o.order_num, o.tab_name, o.server_name, o.station_code, o.opened_at as order_date
+        FROM pos_orders o WHERE o.state = 'voided' AND o.voided_at IS NOT NULL
+        UNION ALL
+        SELECT a.id, a.audit_type, COALESCE(a.detail->>'item_name', a.audit_type) as item_name, COALESCE((a.detail->>'amount')::numeric, 0) as price, 1 as qty, a.reason, a.staff_id as action_by, a.created_at as action_at, COALESCE((a.detail->>'order_num')::integer, 0) as order_num, a.detail->>'tab_name' as tab_name, a.staff_name as server_name, a.detail->>'station_code' as station_code, a.created_at as order_date
+        FROM pos_audit_log a
+      ) AS audit WHERE action_at::date >= $1 AND action_at::date <= $2`;
+
+    const params = [from, to];
+    if (type && type !== 'all') {
+      if (type === 'void') {
+        query += ` AND (audit_type = 'void' OR audit_type = 'tab_void')`;
+      } else {
+        params.push(type);
+        query += ` AND audit_type = $${params.length}`;
+      }
+    }
+    query += ' ORDER BY action_at DESC LIMIT 500';
+
+    const { rows: entries } = await pool.query(query, params);
+
+    const data = { date_from: from, date_to: to, stats, entries };
+    const doc = pdfAudit.generate(data);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="RIDDIM_Audit_${from}.pdf"`);
+    doc.pipe(res);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ── LOG an audit entry ───────────────────────────────────────
 router.post('/', async (req, res) => {
   try {

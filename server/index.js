@@ -51,6 +51,17 @@ app.use('/api/paid-outs', paidOutsRouter);
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/printer', printerRouter);
 
+// Terminal shutdown
+app.post('/api/terminal/shutdown', (req, res) => {
+  res.json({ ok: true });
+  setTimeout(() => {
+    const { exec } = require('child_process');
+    exec('sudo shutdown now', (err) => {
+      if (err) console.error('[shutdown] error:', err.message);
+    });
+  }, 500);
+});
+
 // Health check
 app.get('/api/health', async (req, res) => {
   try {
