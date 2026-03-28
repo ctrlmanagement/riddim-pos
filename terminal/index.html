@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>RIDDIM POS</title>
   <link rel="stylesheet" href="css/terminal.css">
+  <link rel="stylesheet" href="css/screensaver.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 </head>
 <body>
@@ -752,5 +753,20 @@
 <script src="js/mgmt-reports.js"></script>
 <script src="js/paid-outs.js"></script>
 <script src="js/mgmt-operations.js"></script>
+
+<!-- Screensaver (must load after login.js to override logout) -->
+<script src="js/screensaver.js"></script>
+
+<!-- ════════════════════════════════════════
+     SCREENSAVER OVERLAY
+     ════════════════════════════════════════ -->
+<div id="screensaver">
+  <div class="ss-logo">
+    <div class="ss-brand">RIDDIM</div>
+    <div class="ss-sub">SUPPER CLUB</div>
+  </div>
+  <div id="ssTime" class="ss-time"></div>
+</div>
+
 </body>
 </html>

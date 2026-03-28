@@ -1,0 +1,59 @@
+/* ════════════════════════════════════════
+   SCREENSAVER
+   Shown on login screen after idle timeout.
+   Dismissed by any touch/click/key.
+   ════════════════════════════════════════ */
+
+#screensaver {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #0A0A0A;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  cursor: none;
+}
+
+#screensaver.active {
+  display: flex;
+}
+
+.ss-logo {
+  text-align: center;
+  animation: ss-breathe 4s ease-in-out infinite;
+}
+
+.ss-brand {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 120px;
+  font-weight: 600;
+  color: #D4A843;
+  letter-spacing: 16px;
+  line-height: 1;
+}
+
+.ss-sub {
+  font-family: 'Bebas Neue', 'Arial Narrow', sans-serif;
+  font-size: 36px;
+  color: #888888;
+  letter-spacing: 12px;
+  margin-top: 8px;
+}
+
+.ss-time {
+  margin-top: 60px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 48px;
+  font-weight: 300;
+  color: #D4A843;
+  letter-spacing: 4px;
+  animation: ss-breathe 4s ease-in-out infinite;
+  animation-delay: 1s;
+}
+
+@keyframes ss-breathe {
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 0.85; }
+}

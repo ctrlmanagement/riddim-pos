@@ -68,6 +68,7 @@ async function attemptLogin() {
     }
     currentUser = user;
     document.getElementById('loginError').textContent = '';
+    if (typeof stopScreensaverTimer === 'function') stopScreensaverTimer();
     enterTerminal();
   } else {
     document.getElementById('loginError').textContent = STAFF.length === 0
@@ -205,6 +206,7 @@ function logout() {
   currentUser = null;
   showScreen('login');
   initLogin();
+  if (typeof startScreensaverTimer === 'function') startScreensaverTimer();
 }
 
 // ═══════════════════════════════════════════
