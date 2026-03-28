@@ -1,0 +1,12 @@
+{
+  "name": "riddim-print-agent",
+  "version": "1.0.0",
+  "description": "Lightweight print agent for RIDDIM POS terminals without the full server",
+  "main": "agent.js",
+  "scripts": {
+    "start": "node agent.js"
+  },
+  "dependencies": {
+    "usb": "^2.14.0"
+  }
+}

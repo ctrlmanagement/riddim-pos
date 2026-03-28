@@ -1,0 +1,15 @@
+[Unit]
+Description=RIDDIM POS Print Agent
+After=network.target
+
+[Service]
+Type=simple
+User=cipher
+WorkingDirectory=/home/cipher/print-agent
+ExecStart=/usr/bin/node agent.js
+Restart=always
+RestartSec=5
+Environment=PRINT_AGENT_PORT=3001
+
+[Install]
+WantedBy=multi-user.target

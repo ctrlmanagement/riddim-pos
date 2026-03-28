@@ -1,13 +1,17 @@
-/* RIDDIM POS — Receipt Preview */
+/* RIDDIM POS — Receipt Preview + Print */
 'use strict';
 
 // ═══════════════════════════════════════════
 // RECEIPT PREVIEW
 // ═══════════════════════════════════════════
 
+let _lastReceiptTab = null;
+
 function showReceipt(tab) {
   const el = document.getElementById('receiptBody');
   if (!el) return;
+
+  _lastReceiptTab = tab;
 
   const now = tab.closedAt || new Date();
   const dateStr = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
@@ -106,6 +110,57 @@ function showReceipt(tab) {
   openModal('receiptModal');
 }
 
+// ── PRINT TO THERMAL PRINTER ─────────────────────────
+async function printReceipt() {
+  if (!_lastReceiptTab) {
+    showToast('No receipt to print');
+    return;
+  }
+
+  const btn = document.querySelector('.receipt-print-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'PRINTING...'; }
+
+  try {
+    // Build the tab payload the escpos driver expects
+    const tab = _lastReceiptTab;
+    const staffMap = {};
+    STAFF.forEach(s => staffMap[s.id] = s.name);
+
+    const printTab = {
+      orderNum: tab.orderNum,
+      saleNum: tab.saleNum,
+      name: tab.name,
+      payMethod: tab.payMethod,
+      serverName: staffMap[tab.createdBy] || 'Staff',
+      station: STATION.label,
+      closedAt: tab.closedAt,
+      tableNum: tab.tableNum,
+      guestCount: tab.guestCount,
+      lines: tab.lines,
+      discountPct: tab.discountPct,
+      discountAmt: tab.discountAmt,
+      autoGrat: tab.autoGrat,
+      tipAmount: tab.tipAmount,
+      depositUsed: tab.depositUsed,
+      depositUnused: tab.depositUnused,
+      balanceDue: tab.balanceDue,
+      minSpendRequired: tab.minSpendRequired,
+    };
+
+    await serverPost('/api/printer/receipt', {
+      tab: printTab,
+      config: { tax_rate: CONFIG.tax_rate, receipt_footer: CONFIG.receipt_footer },
+    });
+
+    showToast('Receipt printed');
+  } catch (e) {
+    showToast('Print failed: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'PRINT'; }
+  }
+}
+
 function closeReceipt() {
+  _lastReceiptTab = null;
   closeModal('receiptModal');
 }

@@ -68,3 +68,20 @@
 
 .receipt-close-btn:hover { background: var(--gold-bright); }
 .receipt-close-btn:active { transform: scale(0.97); }
+
+.receipt-print-btn {
+  flex: 1;
+  height: 52px;
+  border-radius: var(--radius);
+  border: 2px solid var(--gold);
+  background: transparent;
+  color: var(--gold);
+  font-family: var(--font-label);
+  font-size: 18px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.receipt-print-btn:hover { background: rgba(212,168,67,0.15); }
+.receipt-print-btn:active { transform: scale(0.97); }
+.receipt-print-btn:disabled { opacity: 0.5; cursor: not-allowed; }

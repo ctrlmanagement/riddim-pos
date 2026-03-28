@@ -46,7 +46,7 @@ apt-get update -qq
 apt-get upgrade -y -qq
 
 # ─── 2. Install Dependencies ────────────────────
-echo "[2/8] Installing dependencies..."
+echo "[2/9] Installing dependencies..."
 apt-get install -y -qq \
   chromium-browser \
   xinit \
@@ -61,10 +61,14 @@ apt-get install -y -qq \
   git \
   htop \
   vim \
-  xinput
+  xinput \
+  nodejs \
+  npm \
+  libusb-1.0-0-dev \
+  libudev-dev
 
 # ─── 3. Create Admin User (cipher) ──────────────
-echo "[3/8] Creating admin user: cipher..."
+echo "[3/9] Creating admin user: cipher..."
 if id "cipher" &>/dev/null; then
   echo "  User cipher already exists, updating password..."
   echo "cipher:cipher" | chpasswd
@@ -74,7 +78,7 @@ else
 fi
 
 # ─── 4. Create Kiosk User ───────────────────────
-echo "[4/8] Creating kiosk user..."
+echo "[4/9] Creating kiosk user..."
 if id "kiosk" &>/dev/null; then
   echo "  User kiosk already exists..."
 else
@@ -84,7 +88,7 @@ else
 fi
 
 # ─── 5. Configure Auto-Login (kiosk) ────────────
-echo "[5/8] Configuring auto-login for kiosk user..."
+echo "[5/9] Configuring auto-login for kiosk user..."
 
 # LightDM auto-login
 mkdir -p /etc/lightdm/lightdm.conf.d
@@ -96,7 +100,7 @@ user-session=kiosk-pos
 LIGHTDM
 
 # ─── 6. Create Kiosk Session ────────────────────
-echo "[6/8] Creating kiosk X session..."
+echo "[6/9] Creating kiosk X session..."
 
 # Xsession desktop entry
 cat > /usr/share/xsessions/kiosk-pos.desktop << 'DESKTOP'
@@ -157,7 +161,10 @@ KIOSK
 chmod +x /usr/local/bin/kiosk-start.sh
 
 # ─── 7. Configure System ────────────────────────
-echo "[7/8] Configuring system..."
+echo "[7/9] Configuring system..."
+
+# Set timezone (Atlanta, GA)
+timedatectl set-timezone America/New_York
 
 # Set hostname
 hostnamectl set-hostname "$TERMINAL_NAME"
@@ -212,7 +219,7 @@ EndSection
 XORG
 
 # ─── 8. POS Server Connection Config ────────────
-echo "[8/8] Writing POS connection config..."
+echo "[8/9] Writing POS connection config..."
 
 mkdir -p /home/kiosk/.config/riddim-pos
 cat > /home/kiosk/.config/riddim-pos/terminal.conf << CONF
@@ -263,6 +270,38 @@ chmod +x /home/cipher/bin/pos-set-server
 # Add bin to cipher's PATH
 echo 'export PATH="$HOME/bin:$PATH"' >> /home/cipher/.bashrc
 chown -R cipher:cipher /home/cipher
+
+# ─── 9. Print Agent ───────────────────────────
+echo "[9/9] Installing print agent..."
+
+# Copy print-agent from repo (assumes repo is at /opt/riddim-pos or scp'd)
+PRINT_AGENT_SRC="${SCRIPT_DIR}/../print-agent"
+PRINT_AGENT_DEST="/opt/riddim-pos/print-agent"
+
+if [ -d "$PRINT_AGENT_SRC" ]; then
+  mkdir -p "$PRINT_AGENT_DEST"
+  cp "$PRINT_AGENT_SRC/agent.js" "$PRINT_AGENT_DEST/"
+  cp "$PRINT_AGENT_SRC/escpos.js" "$PRINT_AGENT_DEST/"
+  cp "$PRINT_AGENT_SRC/package.json" "$PRINT_AGENT_DEST/"
+  cd "$PRINT_AGENT_DEST" && npm install --production 2>/dev/null
+  chown -R kiosk:kiosk "$PRINT_AGENT_DEST"
+  echo "  Print agent installed to $PRINT_AGENT_DEST"
+else
+  echo "  WARNING: print-agent source not found at $PRINT_AGENT_SRC — skipping"
+fi
+
+# udev rule for RP-630 USB printer (allows kiosk user access)
+cat > /etc/udev/rules.d/99-rp630-printer.rules << 'UDEV'
+SUBSYSTEM=="usb", ATTR{idVendor}=="076c", ATTR{idProduct}=="0302", MODE="0666", GROUP="plugdev"
+UDEV
+udevadm control --reload-rules 2>/dev/null || true
+
+# systemd service
+cp "$PRINT_AGENT_SRC/riddim-print-agent.service" /etc/systemd/system/ 2>/dev/null || true
+systemctl daemon-reload
+systemctl enable riddim-print-agent
+systemctl start riddim-print-agent 2>/dev/null || true
+echo "  Print agent service enabled"
 
 echo ""
 echo "═══════════════════════════════════════════"
