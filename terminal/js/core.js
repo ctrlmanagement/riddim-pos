@@ -23,13 +23,7 @@ let CONFIG = {
 };
 
 let STATION = { id: null, code: 'BAR1', label: 'Bar 1', pos: 'POS 1' };
-const TERMINAL_NAME = (() => {
-  const param = new URLSearchParams(window.location.search).get('terminal');
-  if (param) return param;
-  const host = window.location.hostname;
-  if (host === 'localhost' || host === '127.0.0.1') return 'TERM02';
-  return 'TERM03';
-})();
+const TERMINAL_NAME = new URLSearchParams(window.location.search).get('terminal') || 'POS';
 let STAFF = [];
 let MENU_CATEGORIES = [];
 let MENU_ITEMS = [];
