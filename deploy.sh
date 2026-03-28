@@ -15,7 +15,7 @@ echo ""
 
 # ── TERM02 (server + kiosk) ──────────────────
 echo "[TERM02] Pulling latest and restarting server..."
-ssh "$TERM02" "cd $REPO_DIR && git pull && sudo systemctl restart riddim-pos" && \
+ssh "$TERM02" "cd $REPO_DIR && git pull && sudo systemctl restart riddim-pos && sudo systemctl restart lightdm" && \
   echo "[TERM02] Done" || echo "[TERM02] FAILED"
 
 # ── TERM03 (kiosk + print agent) ─────────────
