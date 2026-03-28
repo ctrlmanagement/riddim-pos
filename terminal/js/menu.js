@@ -9,8 +9,7 @@ function renderCategories() {
   const bar = document.getElementById('categoryBar');
   bar.innerHTML = MENU_CATEGORIES.map(c =>
     `<button class="cat-btn ${c.id === activeCategory ? 'active' : ''}"
-            onclick="selectCategory('${c.id}')"
-            ${c.color ? `style="color:${c.id === activeCategory ? '' : c.color}"` : ''}>
+            onclick="selectCategory('${c.id}')">
       ${c.name}
     </button>`
   ).join('');
