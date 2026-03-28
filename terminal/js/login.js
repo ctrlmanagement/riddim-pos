@@ -11,10 +11,7 @@ function initLogin() {
   pinBuffer = '';
   updatePinDots();
   document.getElementById('loginError').textContent = '';
-  document.getElementById('loginStation').textContent = STATION.label + (STATION.pos ? ' — ' + STATION.pos : '');
-
-  // Show station selector if multiple stations
-  renderStationSelector();
+  document.getElementById('loginStation').textContent = TERMINAL_NAME || STATION.label;
 }
 
 function renderStationSelector() {
