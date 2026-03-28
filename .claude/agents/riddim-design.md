@@ -151,6 +151,23 @@ opacity: 0.3; cursor: not-allowed;
 
 ---
 
+## Terminal Menu Layout (S85)
+
+The terminal uses a 2-column vertical sidebar layout for menu browsing:
+
+| Column | Content | Background | Width |
+|---|---|---|---|
+| Left | Category list (22 categories) | Gold tint (rgba 212,168,67,0.08) | ~200px |
+| Right | Item grid for selected category | Dark (obsidian) | Remaining |
+
+- **Unified 76px grid:** Both category rows and item rows share the same 76px height
+- **CSS-only styling:** Category colors from DB (pos_menu_categories.color) are NOT used in terminal rendering
+- **Speed rail items:** Gold highlight background instead of left border stripe
+- **Active category:** Gold left border + slightly brighter background
+- **Empty categories:** Shown but dimmed (ash text)
+
+---
+
 ## Anti-Patterns (violations)
 
 - Using `#FFFFFF` (white) anywhere

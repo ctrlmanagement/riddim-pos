@@ -39,7 +39,7 @@ riddim-pos/
 **POS Tables (terminal writes, BOH reads + manages):**
 ```
 pos_config           — tax_rate, tip defaults, manager gates, receipt footer
-pos_menu_categories  — id, name, sort_order, color, active
+pos_menu_categories  — id, name, sort_order, color (unused in terminal CSS), active. 22 categories matching HotSauce
 pos_menu_items       — id, name, price, category_id, speed_rail, sort_order, inv_product_id, active
 pos_stations         — id, code, label, pos_name, active
 ```
@@ -69,7 +69,7 @@ events               — event schedule, types, capacity
 |---|---|---|
 | **Daily** | Day close summary, daily sales, shift reports | ✅ S78 (summary report + day close in terminal) |
 | **Employee** | Staff management, clock records, checkouts, payroll data | ✅ S78 (BOH staff page + employee report + clock API) |
-| **Menu Item** | Menu item CRUD, pricing, categories, modifiers, 86 management | ✅ S78 (BOH products page + product mix report) |
+| **Menu Item** | Menu item CRUD, pricing, categories (22 matching HotSauce), modifiers, 86 management | ✅ S78 (BOH products page + product mix report) |
 | **Business Intelligence** | Analytics dashboard — see sub-modules below | ✅ S78 (5 report types in BOH) |
 
 ### Business Intelligence Sub-Modules
@@ -158,7 +158,8 @@ BOH uses the same design tokens as the terminal but optimized for desktop/laptop
 11. ~~**Custom Report Builder**~~ ✅ S81 — 13 toggleable sections, saved presets, date range, preview + PDF export
 12. ~~**PDF Export Engine**~~ ✅ S81 — pdfkit-based branded renderer, endpoints for DSR/checkout/paid-outs/custom
 13. ~~**Report Security Gating**~~ ✅ S82 — per-tab permission tiers: DSR/PaidOuts/Custom=mgmt.view_dsr, Employee/Checkout=mgmt.view_employee_reports, Sales=mgmt.view_sales
-14. **EMV/Payment Reports** — pending Stripe Terminal integration (Phase 3)
+14. ~~**Clear POS Data**~~ ✅ S85 — owner button to clear test data from local PG, LAN IP auto-detection for POS server
+15. **EMV/Payment Reports** — pending Stripe Terminal integration (Phase 3)
 
 ---
 

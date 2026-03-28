@@ -31,6 +31,8 @@
 - [ ] Buttons have minimum 48px touch target height
 - [ ] No colors outside the defined palette (obsidian, gold, ivory, ash, red, green, blue, orange)
 - [ ] Modals follow the `modal-overlay > modal > modal-header + modal-body` pattern
+- [ ] Category styling is CSS-only — never read `pos_menu_categories.color` for terminal rendering (S85)
+- [ ] Speed rail items use gold highlight background, not left border stripe (S85)
 - [ ] Toast notifications use the `showToast()` function
 
 ### 4. Touch UX
@@ -74,7 +76,7 @@
 - Breaking the tab state machine (e.g., going from PAID back to OPEN)
 - Removing manager PIN gates on protected actions
 - Adding framework dependencies (React, Vue, jQuery, etc.)
-- Hardcoding menu items, prices, or staff data
+- Hardcoding menu items, prices, staff data, or category colors from DB
 - Using `document.write()` or `eval()`
 - Inline styles on elements that should use CSS classes (exception: programmatic `display:none/flex` for view toggling)
 

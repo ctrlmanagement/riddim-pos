@@ -1,5 +1,5 @@
 # RIDDIM POS — Claude Code Project Context
-**AG Entertainment | S83 | March 28, 2026**
+**AG Entertainment | S85 | March 28, 2026**
 
 ## What This Project Is
 Custom point-of-sale system for RIDDIM Supper Club (Atlanta, GA). Local-first architecture: on-premise server + Elo EloPOS 22" AIO terminals running Ubuntu 22.04 + Chromium kiosk. Integrates with the existing RIDDIM Supabase backend (51 tables — membership, inventory, P&L, events, bookings, ticketing).
@@ -51,11 +51,11 @@ Custom point-of-sale system for RIDDIM Supper Club (Atlanta, GA). Local-first ar
 | Hardware | Elo EloPOS 22" AIO (terminals), Partner Tech RP-630 (receipt printers), U.are.U 4500 (fingerprint, pending) |
 
 ## Deployed Terminals
-| Name | IP | Role | Printer | Status |
-|---|---|---|---|---|
-| TERM02 | 10.77.2.53 | POS server + kiosk | RP-630 (working) | Live |
-| TERM03 | 10.77.2.68 | Kiosk client | RP-630 (needs print agent) | Live |
-| MacBook | 10.77.2.70 | Dev only | — | Dev |
+| Name | IP | Role | Printer | Remote | Status |
+|---|---|---|---|---|---|
+| TERM02 | 10.77.2.53 | POS server + kiosk | RP-630 (working) | RustDesk + http://10.77.2.53:3000/terminal/ | Live |
+| TERM03 | 10.77.2.68 | Kiosk client | RP-630 (needs print agent) | RustDesk | Live |
+| MacBook | 10.77.2.70 | Dev only | — | — | Dev |
 
 ## Folder Structure
 ```
@@ -123,6 +123,8 @@ const BAR_CONFIG = [
 12. **booking_id stored on pos_orders.** Required for deposit to survive terminal restart. (S79)
 13. **Reopen permissions checked live from Supabase.** Not from login-time cache. (S79)
 14. **Report tabs gated by permission tier.** DSR/Paid Outs/Custom = `mgmt.view_dsr`, Employee/Checkout = `mgmt.view_employee_reports`, Summary/Product/Hourly/Station = `mgmt.view_sales`. (S82)
+15. **Category styling is CSS-only.** The `pos_menu_categories.color` DB column is not used for terminal rendering. Left column (categories) uses gold tint background; right column (items) uses dark background. Speed rail items get gold highlight background. Never read category colors from the database for terminal UI. (S85)
+16. **22 categories match HotSauce.** Beer, Vodka, Champ, Rum, Wine, Gin, Cocktails, Tequila, Signature Drinks, Whiskey, Stock Up, Cordials, VIP Table, Cognac, Non Alcoholic, Scotch, Hookah, Btl Service, Food, Retail, Mixers, Keyboard. Do not rename or merge categories without confirming HotSauce parity. (S85)
 
 ## Research Briefs
 Located at `~/ctrl/riddimsupperclub/_briefings/pos-system/`:
@@ -149,3 +151,6 @@ Phase 5.7: Hardware provisioning — COMPLETE (S83) — Ubuntu 22.04 on Elo term
 Phase 6: Integration — inventory, P&L auto-connect (core P&L done, inventory pending)
 Phase 6.5: Printing — COMPLETE (S84) — ESC/POS driver, print agent on TERM03, receipt print button, 42-col/80mm format
 Phase 6.6: Terminal ops — COMPLETE (S84) — screensaver, deploy pipeline, refresh button, custom confirm modal, clear test data API
+Phase 7: Menu/category redesign — COMPLETE (S85) — horizontal category bar → 2-column vertical sidebar (22 categories matching HotSauce), unified 76px grid, CSS-only category styling, speed rail gold highlights, 60 items across 14 populated categories
+Phase 7.1: Remote access — COMPLETE (S85) — RustDesk on TERM02 + TERM03, remote terminal UI at http://10.77.2.53:3000/terminal/
+Phase 7.2: BOH ops — COMPLETE (S85) — clear POS data button, POS server LAN IP detection

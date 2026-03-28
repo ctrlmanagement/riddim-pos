@@ -18,7 +18,7 @@
 ### Key POS Tables (Supabase)
 ```
 pos_config          — tax_rate, default_tip_pct, require_manager_void/comp/discount, max_discount_pct
-pos_menu_categories — id, name, sort_order, color, active
+pos_menu_categories — id, name, sort_order, color (unused in terminal CSS), active. 22 categories matching HotSauce
 pos_menu_items      — id, name, price, category_id, speed_rail, sort_order, inv_product_id, active
 pos_stations        — id, code, label, pos_name, active
 ```
@@ -86,6 +86,8 @@ BAR4 (Bar 4, POS 4), BAR5 (SVC, POS 7), LR (Liquor Room, no POS)
 8. **RIDDIM design system is law.** Obsidian/gold/ivory palette. Bebas Neue for labels. DM Sans for body. No deviations.
 9. **Existing patterns.** Follow the modal pattern (`openModal`/`closeModal`), toast pattern (`showToast`), view switching pattern (`switchView`). Don't invent new UI paradigms.
 10. **Soft deletes.** Set `active = false`, never hard delete menu items, categories, or staff records.
+11. **Category styling is CSS-only (S85).** Left column (categories) uses gold tint, right column (items) uses dark background. Speed rail items get gold highlight. Never read `pos_menu_categories.color` for terminal rendering.
+12. **22 categories match HotSauce.** Do not rename, merge, or reorder categories without confirming HotSauce parity.
 
 ---
 
@@ -95,7 +97,7 @@ BAR4 (Bar 4, POS 4), BAR5 (SVC, POS 7), LR (Liquor Room, no POS)
 |---|---|---|
 | PIN login | Done | 4-digit, station selector |
 | Tab strip + create tab | Done | Bar/walk-in/member/table types |
-| Category bar + menu grid | Done | From pos_menu_categories + pos_menu_items |
+| Category sidebar + menu grid | Done S85 | 2-column vertical sidebar layout. 22 categories (left, gold tint) + item grid (right, dark). Unified 76px row height. CSS-only styling — no DB colors. Speed rail items get gold highlight bg |
 | Cart + line items | Done | Qty increment, pending/sent states |
 | Fire (send to KDS) | Done | Marks lines as sent |
 | Payment modal | Done | Card/cash/comp/split + tip selection |
@@ -124,7 +126,7 @@ BAR4 (Bar 4, POS 4), BAR5 (SVC, POS 7), LR (Liquor Room, no POS)
 | Tab hydration | Done S79 | hydrateTabsFromServer() loads today's orders from local PG on login |
 | Reopen permissions | Done S79 | tab.reopen + tab.reopen_deposit (live Supabase check) |
 | $0 checkout | Done S79 | PAY always enabled — comps, voids, exact cash, deposit-only |
-| Receipt printing | Done S83 | ESC/POS to RP-630 USB. Server API: POST /api/printer/receipt, /test, /open-drawer. TERM02 working, TERM03 needs print agent |
+| Receipt printing | Done S83-S84 | ESC/POS to RP-630 USB. Server API: POST /api/printer/receipt, /test, /open-drawer. TERM02 working, TERM03 needs print agent |
 
 ---
 
