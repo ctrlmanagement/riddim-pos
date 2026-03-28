@@ -147,4 +147,5 @@ Phase 5.5: Paid outs + P&L export — COMPLETE (S81) — paid out recording, day
 Phase 5.6: Report security gating — COMPLETE (S82) — per-tab permission tiers, mgmt.view_dsr permission key
 Phase 5.7: Hardware provisioning — COMPLETE (S83) — Ubuntu 22.04 on Elo terminals, Chromium kiosk, systemd server, receipt printer driver
 Phase 6: Integration — inventory, P&L auto-connect (core P&L done, inventory pending)
-Phase 6.5: Printing — IN PROGRESS (S83) — ESC/POS driver for RP-630, server API done, TERM03 print agent pending
+Phase 6.5: Printing — COMPLETE (S84) — ESC/POS driver, print agent on TERM03, receipt print button, 42-col/80mm format
+Phase 6.6: Terminal ops — COMPLETE (S84) — screensaver, deploy pipeline, refresh button, custom confirm modal, clear test data API
