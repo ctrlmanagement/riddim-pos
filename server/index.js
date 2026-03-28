@@ -29,6 +29,8 @@ app.use('/terminal', express.static(path.join(__dirname, '..', 'terminal')));
 app.use('/shared', express.static(path.join(__dirname, '..', 'shared')));
 // Serve KDS UI (when built)
 app.use('/kds', express.static(path.join(__dirname, '..', 'kds')));
+// Serve BOH portal (avoids HTTPS mixed content when accessing from GitHub Pages)
+app.use('/boh', express.static(path.join(__dirname, '..', 'boh')));
 
 // ── REST ROUTES ─────────────────────────────────────────────
 const ordersRouter = require('./routes/orders');
