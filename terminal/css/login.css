@@ -123,3 +123,20 @@
 }
 
 .login-clock-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+.login-refresh-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--surface-active);
+  background: var(--surface);
+  color: var(--ash);
+  font-size: 20px;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: all var(--transition);
+}
+.login-refresh-btn:active { opacity: 1; color: var(--gold); }
