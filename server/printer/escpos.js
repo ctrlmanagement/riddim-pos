@@ -30,7 +30,7 @@ const CMD = {
   DOUBLE_OFF:     Buffer.from([ESC, 0x21, 0x00]),            // Normal size
   UNDERLINE_ON:   Buffer.from([ESC, 0x2D, 0x01]),
   UNDERLINE_OFF:  Buffer.from([ESC, 0x2D, 0x00]),
-  SEPARATOR:      Buffer.from('------------------------------------------------\n'),
+  SEPARATOR:      Buffer.from('------------------------------------------\n'),
   OPEN_DRAWER:    Buffer.from([ESC, 0x70, 0x00, 0x19, 0xFA]), // Kick cash drawer
 };
 
@@ -87,7 +87,7 @@ async function cmd(c) {
   await write(c);
 }
 
-async function row(left, right, width = 48) {
+async function row(left, right, width = 42) {
   const gap = width - left.length - right.length;
   const line = left + (gap > 0 ? ' '.repeat(gap) : ' ') + right;
   await ln(line);
