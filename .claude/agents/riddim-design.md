@@ -168,6 +168,17 @@ The terminal uses a 2-column vertical sidebar layout for menu browsing:
 
 ---
 
+## Login Screen Elements (S86)
+
+| Element | Position | Style |
+|---|---|---|
+| Refresh button (↻) | Top-right 16px | 40px circle, ivory text, 0.7 opacity, gold on active |
+| Shutdown button (⏻) | Top-right 68px (left of refresh) | 40px circle, red text/border, 0.7 opacity, red fill on active |
+| Clock In/Out | Bottom-left 100px | Surface bg, ivory-dim text, gold on hover |
+| Terminal name | Bottom-center 60px | 12px ash |
+
+---
+
 ## Anti-Patterns (violations)
 
 - Using `#FFFFFF` (white) anywhere

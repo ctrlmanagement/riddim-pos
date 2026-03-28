@@ -125,6 +125,9 @@ const BAR_CONFIG = [
 14. **Report tabs gated by permission tier.** DSR/Paid Outs/Custom = `mgmt.view_dsr`, Employee/Checkout = `mgmt.view_employee_reports`, Summary/Product/Hourly/Station = `mgmt.view_sales`. (S82)
 15. **Category styling is CSS-only.** The `pos_menu_categories.color` DB column is not used for terminal rendering. Left column (categories) uses gold tint background; right column (items) uses dark background. Speed rail items get gold highlight background. Never read category colors from the database for terminal UI. (S85)
 16. **22 categories match HotSauce.** Beer, Vodka, Champ, Rum, Wine, Gin, Cocktails, Tequila, Signature Drinks, Whiskey, Stock Up, Cordials, VIP Table, Cognac, Non Alcoholic, Scotch, Hookah, Btl Service, Food, Retail, Mixers, Keyboard. Do not rename or merge categories without confirming HotSauce parity. (S85)
+17. **Role level derives from security group name.** `getRoleLevel()` checks `groupName` (from `pos_security_groups.name`) first, falls back to `pos_role`. Owner group = level 5 regardless of pos_role value. Never use pos_role alone for hierarchy. (S86)
+18. **Tab strip is role-filtered.** `getVisibleTabs()` used everywhere — tab strip, View Servers, Closed Checks. Staff only see own tabs unless `tab.view_all` is granted. Never show tabs from higher role level. (S86)
+19. **Cash deposit is manual entry.** Close Day accepts `cash_deposit` from terminal/BOH. Server uses manual amount for `daily_payouts` Cash Deposit row. Expected amount shown for reference only. (S86)
 
 ## Research Briefs
 Located at `~/ctrl/riddimsupperclub/_briefings/pos-system/`:
@@ -154,3 +157,8 @@ Phase 6.6: Terminal ops — COMPLETE (S84) — screensaver, deploy pipeline, ref
 Phase 7: Menu/category redesign — COMPLETE (S85) — horizontal category bar → 2-column vertical sidebar (22 categories matching HotSauce), unified 76px grid, CSS-only category styling, speed rail gold highlights, 60 items across 14 populated categories
 Phase 7.1: Remote access — COMPLETE (S85) — RustDesk on TERM02 + TERM03, remote terminal UI at http://10.77.2.53:3000/terminal/
 Phase 7.2: BOH ops — COMPLETE (S85) — clear POS data button, POS server LAN IP detection
+Phase 8: PDF exports — COMPLETE (S86) — all 9 report types + transactions + audit have PDF export, 3 new composers
+Phase 8.1: Role permissions — COMPLETE (S86) — role hierarchy (owner>gm>manager>bartender>barback), tab.view_all, mgmt.manage_staff, security group-based levels
+Phase 8.2: Staff management — COMPLETE (S86) — MANAGE STAFF panel, tip declaration on checkout, declared_tips column
+Phase 8.3: Close Day redesign — COMPLETE (S86) — cash deposit input, OVER/SHORT display, CC settle placeholder, BOH close day, clean error messages
+Phase 8.4: Terminal UI — COMPLETE (S86) — shutdown button, brighter refresh, owner portal POS links fixed

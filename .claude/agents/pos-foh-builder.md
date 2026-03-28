@@ -127,6 +127,11 @@ BAR4 (Bar 4, POS 4), BAR5 (SVC, POS 7), LR (Liquor Room, no POS)
 | Reopen permissions | Done S79 | tab.reopen + tab.reopen_deposit (live Supabase check) |
 | $0 checkout | Done S79 | PAY always enabled — comps, voids, exact cash, deposit-only |
 | Receipt printing | Done S83-S84 | ESC/POS to RP-630 USB. Server API: POST /api/printer/receipt, /test, /open-drawer. TERM02 working, TERM03 needs print agent |
+| Role-based tab visibility | Done S86 | Role hierarchy (owner>gm>manager>bartender>barback). getVisibleTabs() filters tab strip, View Servers, Closed Checks. Security group name determines level. tab.view_all permission |
+| Staff management panel | Done S86 | MANAGE STAFF in management nav. View staff by name, open/closed tabs, run checkout, clock out with tip declaration. mgmt.manage_staff permission |
+| Tip declaration | Done S86 | DECLARE TIPS input on checkout flow. declared_tips stored on clock entry. Pre-filled with cash tips |
+| Close Day cash deposit | Done S86 | CASH DEPOSIT input with expected amount, OVER/SHORT live display, CC settle placeholder |
+| Terminal shutdown | Done S86 | Red shutdown button on login screen. POST /api/terminal/shutdown runs sudo shutdown now |
 
 ---
 

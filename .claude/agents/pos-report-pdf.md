@@ -87,6 +87,8 @@ All PDFs follow a single branded template. No exceptions.
 | Hourly | `GET /api/reports/hourly` | `GET /api/reports/hourly/pdf` | orders |
 | Station | `GET /api/reports/station` | `GET /api/reports/station/pdf` | orders, payments |
 | Custom | `POST /api/reports/custom` | `POST /api/reports/custom/pdf` | user-selected sections |
+| Transactions | `GET /api/transactions` | `GET /api/transactions/export/pdf` | orders, payments (S86) |
+| Audit Trail | `GET /api/audit` | `GET /api/audit/export/pdf` | order_lines, audit_log (S86) |
 
 All endpoints accept `?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD` (defaults to today).
 
@@ -135,7 +137,12 @@ Owner picks sections from a checklist. Each section maps to a data query + PDF r
 | `server/reports/pdf-checkout.js` | Checkout PDF composition |
 | `server/reports/pdf-paid-outs.js` | Paid Out Summary PDF |
 | `server/reports/pdf-custom.js` | Custom report PDF (assembles selected sections) |
+| `server/reports/pdf-summary.js` | Summary, Product Mix, Employee, Hourly, Station PDFs (S86) |
+| `server/reports/pdf-transactions.js` | Transaction search results PDF (S86) |
+| `server/reports/pdf-audit.js` | Audit trail PDF with stats summary (S86) |
 | `server/routes/reports.js` | All report endpoints (JSON + PDF) |
+| `server/routes/transactions.js` | Transaction search + PDF export (S86) |
+| `server/routes/audit.js` | Audit log + PDF export (S86) |
 | `terminal/js/mgmt-reports.js` | Terminal report views + export buttons |
 
 ---

@@ -159,7 +159,12 @@ BOH uses the same design tokens as the terminal but optimized for desktop/laptop
 12. ~~**PDF Export Engine**~~ ✅ S81 — pdfkit-based branded renderer, endpoints for DSR/checkout/paid-outs/custom
 13. ~~**Report Security Gating**~~ ✅ S82 — per-tab permission tiers: DSR/PaidOuts/Custom=mgmt.view_dsr, Employee/Checkout=mgmt.view_employee_reports, Sales=mgmt.view_sales
 14. ~~**Clear POS Data**~~ ✅ S85 — owner button to clear test data from local PG, LAN IP auto-detection for POS server
-15. **EMV/Payment Reports** — pending Stripe Terminal integration (Phase 3)
+15. ~~**Universal PDF Export**~~ ✅ S86 — all 9 report types + transactions + audit have PDF export. 3 new composers (pdf-summary.js, pdf-transactions.js, pdf-audit.js)
+16. ~~**Close Day from BOH**~~ ✅ S86 — Close Day tab with checklist, staff management, cash deposit input, CC settle placeholder
+17. ~~**Staff Management (BOH)**~~ ✅ S86 — clocked-in staff table with per-staff checkout, tip declaration, clock out
+18. ~~**Owner Portal POS Links**~~ ✅ S86 — all 5 POS cards clickable with correct paths, hash routing for deep-linking
+19. ~~**New Permission Keys**~~ ✅ S86 — tab.view_all, mgmt.manage_staff seeded in Supabase for all 10 security groups
+20. **EMV/Payment Reports** — pending Stripe Terminal integration (Phase 3)
 
 ---
 
