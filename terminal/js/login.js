@@ -163,6 +163,7 @@ function applyPermissionUI() {
     'checks': 'pay.change_tip',
     'settings': 'mgmt.edit_config',
     'dayclose': 'mgmt.close_day',
+    'staff-manage': 'mgmt.manage_staff',
   };
   Object.entries(mgmtSections).forEach(([section, perm]) => {
     const btn = document.querySelector(`.mgmt-nav-btn[data-mgmt="${section}"]`);

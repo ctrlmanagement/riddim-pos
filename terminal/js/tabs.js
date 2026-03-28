@@ -50,7 +50,7 @@ function getActiveTab() {
 
 function renderTabs() {
   const strip = document.getElementById('tabStrip');
-  const openTabs = tabs.filter(t => t.status === 'open' || t.status === 'sent');
+  const openTabs = getVisibleTabs(['open', 'sent']);
   strip.innerHTML = openTabs.map(t => {
     const total = tabSubtotal(t);
     return `<div class="tab-chip ${t.id === activeTabId ? 'active' : ''}"

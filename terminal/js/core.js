@@ -163,6 +163,46 @@ let activeCategory = null; // set after categories load
 let nextTabNum = 1;
 
 // ═══════════════════════════════════════════
+// ROLE HIERARCHY
+// ═══════════════════════════════════════════
+
+const ROLE_LEVEL = {
+  barback: 1, hostess: 1, kitchen: 1,
+  bartender: 2, cashier: 2, server: 2, waitress: 2,
+  manager: 3,
+  gm: 4,
+  owner: 5,
+};
+
+function getRoleLevel(role) {
+  return ROLE_LEVEL[(role || '').toLowerCase()] || 2;
+}
+
+// Can the viewer see/manage the target staff member?
+// Same level only if it's yourself; otherwise must be strictly higher
+function canViewStaff(viewerRole, targetRole) {
+  return getRoleLevel(viewerRole) > getRoleLevel(targetRole);
+}
+
+// Filter tabs visible to the current user based on role hierarchy
+function getVisibleTabs(statusFilter) {
+  const myLevel = getRoleLevel(currentUser.role);
+  const viewAll = hasPermission('tab.view_all');
+
+  return tabs.filter(t => {
+    if (statusFilter && !statusFilter.includes(t.status)) return false;
+    // Always see own tabs
+    if (t.createdBy === currentUser.id) return true;
+    // Without view_all, only own tabs
+    if (!viewAll) return false;
+    // With view_all, see same-level and below (never above)
+    const creator = STAFF.find(s => s.id === t.createdBy);
+    if (!creator) return true; // unknown creator — show
+    return getRoleLevel(creator.role) <= myLevel;
+  });
+}
+
+// ═══════════════════════════════════════════
 // SCREEN MANAGEMENT
 // ═══════════════════════════════════════════
 

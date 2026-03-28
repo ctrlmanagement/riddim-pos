@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS pos_clock_entries (
     clock_out       timestamptz,
     station_code    text,
     forced_out_by   uuid,                           -- if manager forced clock-out
+    declared_tips   numeric(10,2) DEFAULT 0,        -- tips declared at checkout
     synced_at       timestamptz,
     created_at      timestamptz DEFAULT now()
 );

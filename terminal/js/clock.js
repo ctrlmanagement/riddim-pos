@@ -223,7 +223,14 @@ function showStaffCheckout(staff) {
   html += `<div class="co-divider"></div>
     <div class="co-row total"><span>Tabs Closed</span><span>${staffTabs.length}</span></div>
     <div class="co-row total"><span>Cash Due</span><span>$${cashSales.toFixed(2)}</span></div>
-    <div class="co-row total"><span>Net CC Tips</span><span>$${cardTips.toFixed(2)}</span></div>`;
+    <div class="co-row total"><span>Net CC Tips</span><span>$${cardTips.toFixed(2)}</span></div>
+    <div class="co-divider"></div>
+    <div class="co-section-title">DECLARE TIPS</div>
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0">
+      <label style="font-family:var(--font-label);font-size:12px;color:var(--ash);letter-spacing:1px">CASH TIPS $</label>
+      <input type="number" id="checkoutDeclaredTips" step="0.01" min="0" placeholder="0.00" value="${cashTips.toFixed(2)}"
+             style="width:120px;height:36px;padding:0 8px;border:1px solid var(--surface);border-radius:var(--radius);background:var(--obsidian-mid);color:var(--ivory);font-size:14px">
+    </div>`;
 
   el.innerHTML = html;
   openModal('checkoutModal');
@@ -234,14 +241,15 @@ function confirmCheckoutAndClockOut() {
 
   const staff = pendingClockOutStaff;
   const now = new Date();
+  const declaredTips = parseFloat(document.getElementById('checkoutDeclaredTips')?.value) || 0;
 
-  clockEntries.push({ staffId: staff.id, staffName: staff.name, type: 'out', time: now });
+  clockEntries.push({ staffId: staff.id, staffName: staff.name, type: 'out', time: now, declaredTips });
   staff.checkedOut = true;
 
   // Persist to local server
-  if (typeof serverClockOut === 'function') serverClockOut(staff.id);
+  if (typeof serverClockOut === 'function') serverClockOut(staff.id, declaredTips);
 
   closeModal('checkoutModal');
-  showToast(staff.name + ' clocked out');
+  showToast(staff.name + ' clocked out' + (declaredTips > 0 ? ` — $${declaredTips.toFixed(2)} declared tips` : ''));
   pendingClockOutStaff = null;
 }

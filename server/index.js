@@ -88,10 +88,15 @@ const sync = require('./sync');
 // ── START ───────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', async () => {
   console.log(`RIDDIM POS server running on port ${PORT}`);
   console.log(`  Terminal: http://localhost:${PORT}/terminal/`);
   console.log(`  KDS:      http://localhost:${PORT}/kds/`);
+
+  // Auto-migrate: add declared_tips column if missing
+  try {
+    await pool.query(`ALTER TABLE pos_clock_entries ADD COLUMN IF NOT EXISTS declared_tips numeric(10,2) DEFAULT 0`);
+  } catch (e) { /* column may already exist */ }
   console.log(`  API:      http://localhost:${PORT}/api/health`);
   console.log(`  Sync:     http://localhost:${PORT}/api/sync/status`);
   sync.start();

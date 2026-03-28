@@ -8,10 +8,11 @@
 function renderMgmtServers() {
   const staffMap = {};
   STAFF.forEach(s => staffMap[s.id] = s.name);
+  const myLevel = getRoleLevel(currentUser.role);
 
-  // Group open tabs by creator
+  // Group visible open tabs by creator (role-filtered)
   const serverTabs = {};
-  tabs.filter(t => t.status === 'open' || t.status === 'sent').forEach(t => {
+  getVisibleTabs(['open', 'sent']).forEach(t => {
     const id = t.createdBy;
     const name = staffMap[id] || 'Unknown';
     if (!serverTabs[id]) serverTabs[id] = { name, tabs: [] };
@@ -194,7 +195,7 @@ function mgmtForceClockOut(staffId) {
 // ═══════════════════════════════════════════
 
 function renderMgmtChecks() {
-  const closed = tabs.filter(t => t.status === 'closed' || t.status === 'paid');
+  const closed = getVisibleTabs(['closed', 'paid']);
   const staffMap = {};
   STAFF.forEach(s => staffMap[s.id] = s.name);
 
@@ -534,4 +535,208 @@ async function closeDay() {
   switchView('terminal');
   renderTabs();
   renderCart();
+}
+
+// ═══════════════════════════════════════════
+// STAFF MANAGEMENT — view by name, edit tabs,
+// run checkout, clock out with tip declaration
+// ═══════════════════════════════════════════
+
+function renderMgmtStaffManage() {
+  const list = document.getElementById('mgmtStaffManageList');
+  const myLevel = getRoleLevel(currentUser.role);
+
+  // Staff at or below current user's role level (never higher)
+  const manageable = STAFF.filter(s =>
+    s.id !== currentUser.id && getRoleLevel(s.role) < myLevel
+  );
+
+  // Determine who is clocked in
+  const clockedInIds = new Set();
+  if (typeof clockEntries !== 'undefined') {
+    const latestByStaff = {};
+    clockEntries.forEach(e => {
+      if (!latestByStaff[e.staffId] || new Date(e.time) > new Date(latestByStaff[e.staffId].time)) {
+        latestByStaff[e.staffId] = e;
+      }
+    });
+    Object.entries(latestByStaff).forEach(([id, e]) => {
+      if (e.type === 'in') clockedInIds.add(id);
+    });
+  }
+
+  const clockedIn = manageable.filter(s => clockedInIds.has(s.id));
+  const notClockedIn = manageable.filter(s => !clockedInIds.has(s.id));
+
+  if (manageable.length === 0) {
+    list.innerHTML = '<div class="mgmt-empty">No staff to manage</div>';
+    return;
+  }
+
+  let html = '';
+
+  if (clockedIn.length > 0) {
+    html += `<div class="clock-section-label">CLOCKED IN (${clockedIn.length})</div>`;
+    html += `<table class="mgmt-table">
+      <thead><tr><th>NAME</th><th>ROLE</th><th>OPEN TABS</th><th>CLOSED</th><th></th></tr></thead>
+      <tbody>
+        ${clockedIn.map(s => {
+          const openCount = tabs.filter(t => t.createdBy === s.id && (t.status === 'open' || t.status === 'sent')).length;
+          const closedCount = tabs.filter(t => t.createdBy === s.id && (t.status === 'closed' || t.status === 'paid')).length;
+          return `<tr>
+            <td><span class="clock-dot in"></span> ${s.name}</td>
+            <td>${s.role}</td>
+            <td>${openCount || '—'}</td>
+            <td>${closedCount || '—'}</td>
+            <td>
+              <button class="mgmt-edit-btn" onclick="staffManageSelect('${s.id}')" style="margin-right:4px">MANAGE</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  if (notClockedIn.length > 0) {
+    html += `<div class="clock-section-label" style="margin-top:20px">NOT CLOCKED IN (${notClockedIn.length})</div>`;
+    html += `<table class="mgmt-table">
+      <thead><tr><th>NAME</th><th>ROLE</th><th>OPEN TABS</th><th>CLOSED</th><th></th></tr></thead>
+      <tbody>
+        ${notClockedIn.map(s => {
+          const openCount = tabs.filter(t => t.createdBy === s.id && (t.status === 'open' || t.status === 'sent')).length;
+          const closedCount = tabs.filter(t => t.createdBy === s.id && (t.status === 'closed' || t.status === 'paid')).length;
+          return `<tr>
+            <td><span class="clock-dot out"></span> ${s.name}</td>
+            <td>${s.role}</td>
+            <td>${openCount || '—'}</td>
+            <td>${closedCount || '—'}</td>
+            <td>
+              ${openCount > 0 || closedCount > 0 ? `<button class="mgmt-edit-btn" onclick="staffManageSelect('${s.id}')">MANAGE</button>` : ''}
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  list.innerHTML = html;
+}
+
+function staffManageSelect(staffId) {
+  const staff = STAFF.find(s => s.id === staffId);
+  if (!staff) return;
+
+  const list = document.getElementById('mgmtStaffManageList');
+  const openTabs = tabs.filter(t => t.createdBy === staff.id && (t.status === 'open' || t.status === 'sent'));
+  const closedTabs = tabs.filter(t => t.createdBy === staff.id && (t.status === 'closed' || t.status === 'paid'));
+
+  // Check if clocked in
+  let isClockedIn = false;
+  if (typeof clockEntries !== 'undefined') {
+    const last = [...clockEntries].reverse().find(e => e.staffId === staff.id);
+    isClockedIn = last && last.type === 'in';
+  }
+
+  let html = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <span style="font-family:var(--font-label);font-size:18px;color:var(--gold);letter-spacing:2px">${staff.name}</span>
+        <span style="font-size:12px;color:var(--ash);margin-left:8px">${staff.role.toUpperCase()}</span>
+        ${isClockedIn ? '<span class="clock-dot in" style="margin-left:8px"></span>' : ''}
+      </div>
+      <button class="mgmt-edit-btn" onclick="renderMgmtStaffManage()">BACK</button>
+    </div>`;
+
+  // Open tabs
+  if (openTabs.length > 0) {
+    html += `<div style="font-family:var(--font-label);font-size:12px;color:var(--gold);letter-spacing:2px;margin-bottom:8px">OPEN TABS (${openTabs.length})</div>`;
+    html += `<table class="mgmt-table">
+      <thead><tr><th>TAB</th><th>ITEMS</th><th>TOTAL</th><th></th></tr></thead>
+      <tbody>
+        ${openTabs.map(t => {
+          const total = tabSubtotal(t);
+          return `<tr>
+            <td>${t.name}</td>
+            <td>${t.lines.filter(l => !l.voided).length}</td>
+            <td>$${total.toFixed(2)}</td>
+            <td><button class="mgmt-edit-btn" onclick="mgmtSelectTab('${t.id}')">VIEW</button></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  } else {
+    html += `<div style="color:var(--ash);font-size:14px;margin-bottom:16px">No open tabs</div>`;
+  }
+
+  // Closed tabs
+  if (closedTabs.length > 0) {
+    html += `<div style="font-family:var(--font-label);font-size:12px;color:var(--gold);letter-spacing:2px;margin:16px 0 8px">CLOSED TABS (${closedTabs.length})</div>`;
+    html += `<table class="mgmt-table">
+      <thead><tr><th>TAB</th><th>METHOD</th><th>TOTAL</th><th>TIP</th></tr></thead>
+      <tbody>
+        ${closedTabs.sort((a, b) => new Date(b.closedAt || b.paidAt) - new Date(a.closedAt || a.paidAt)).map(t => {
+          const total = tabTotal(t);
+          return `<tr>
+            <td>${t.name}</td>
+            <td>${(t.payMethod || '—').toUpperCase()}</td>
+            <td>$${total.toFixed(2)}</td>
+            <td>$${(t.tipAmount || 0).toFixed(2)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  // Actions
+  html += `<div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">`;
+
+  // Checkout report
+  html += `<button class="mgmt-action-btn" onclick="staffManageCheckout('${staff.id}')">RUN CHECKOUT</button>`;
+
+  // Clock out with tip declaration (only if clocked in and no open tabs)
+  if (isClockedIn && openTabs.length === 0) {
+    html += `
+      <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+        <label style="font-family:var(--font-label);font-size:11px;color:var(--ash);letter-spacing:1px">DECLARED TIPS $</label>
+        <input type="number" id="staffDeclaredTips" step="0.01" min="0" placeholder="0.00"
+               style="width:100px;height:36px;padding:0 8px;border:1px solid var(--surface);border-radius:var(--radius);background:var(--obsidian-mid);color:var(--ivory);font-size:14px">
+        <button class="mgmt-action-btn" onclick="staffManageClockOut('${staff.id}')" style="background:var(--red);border-color:var(--red)">CLOCK OUT</button>
+      </div>`;
+  } else if (isClockedIn && openTabs.length > 0) {
+    html += `<span style="color:var(--red);font-size:13px;margin-left:auto">Close ${openTabs.length} open tab(s) before clock out</span>`;
+  }
+
+  html += `</div>`;
+  list.innerHTML = html;
+}
+
+function staffManageCheckout(staffId) {
+  const staff = STAFF.find(s => s.id === staffId);
+  if (!staff) return;
+  // Reuse existing checkout report
+  pendingClockOutStaff = null; // don't auto clock out
+  showStaffCheckout(staff);
+}
+
+function staffManageClockOut(staffId) {
+  const staff = STAFF.find(s => s.id === staffId);
+  if (!staff) return;
+
+  const declaredTips = parseFloat(document.getElementById('staffDeclaredTips')?.value) || 0;
+
+  if (typeof clockEntries !== 'undefined') {
+    clockEntries.push({
+      staffId: staff.id,
+      staffName: staff.name,
+      type: 'out',
+      time: new Date(),
+      declaredTips: declaredTips,
+    });
+  }
+
+  // Persist to local server
+  if (typeof serverClockOut === 'function') serverClockOut(staff.id, declaredTips);
+
+  showToast(`${staff.name} clocked out` + (declaredTips > 0 ? ` — $${declaredTips.toFixed(2)} declared tips` : ''));
+  renderMgmtStaffManage();
 }

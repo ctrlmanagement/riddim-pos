@@ -259,10 +259,11 @@ async function serverClockIn(staffId, staffName) {
   return result;
 }
 
-async function serverClockOut(staffId, forcedBy) {
+async function serverClockOut(staffId, declaredTips, forcedBy) {
   const result = await serverPost('/api/clock/out', {
     staff_id: staffId,
     forced_by: forcedBy || null,
+    declared_tips: declaredTips || 0,
   });
   if (result && socket) socket.emit('clock:out', { staff_id: staffId, time: new Date() });
   return result;
