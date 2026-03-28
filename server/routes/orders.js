@@ -380,4 +380,33 @@ async function getOrderWithLines(orderId) {
   };
 }
 
+// ── CLEAR ALL POS DATA (owner-only, for test data cleanup) ──
+router.post('/clear-all', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM pos_payments');
+      await client.query('DELETE FROM pos_order_lines');
+      await client.query('DELETE FROM pos_orders');
+      await client.query('DELETE FROM pos_paid_outs');
+      await client.query('DELETE FROM pos_sessions');
+      await client.query('DELETE FROM pos_audit_log');
+      await client.query('DELETE FROM pos_clock_entries');
+      await client.query('COMMIT');
+
+      console.log('[clear-all] All POS data cleared');
+      res.json({ status: 'ok', message: 'All POS data cleared' });
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('[clear-all] error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
