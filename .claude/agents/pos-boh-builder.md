@@ -6,7 +6,7 @@
 ## Architecture Context
 
 ### Stack
-- **Local Server:** Node.js + Express + Socket.IO (Mac Mini M4, serves all terminals + BOH)
+- **Local Server:** Node.js 20 + Express + Socket.IO (Elo EloPOS TERM02 as server, systemd service)
 - **Local Database:** PostgreSQL 16 (order engine, offline persistence)
 - **Cloud Database:** Supabase PostgreSQL (`cbvryfgrqzdvbqigyrgh`, shared with RIDDIM platform)
 - **BOH UI:** Web app served by local server (browser on office Mac or owner's laptop)
@@ -24,7 +24,8 @@ riddim-pos/
 │                               # management (router), mgmt-* (6 modules)
 ├── kds/                        # Kitchen/bar display (planned — Phase 4)
 ├── server/                     # Local Node.js server ✅ S78+ (Express + Socket.IO + PG + pdfkit)
-│   ├── routes/                 # orders, clock, transactions, audit, reports, sync, paid-outs, sessions
+│   ├── routes/                 # orders, clock, transactions, audit, reports, sync, paid-outs, sessions, printer
+│   ├── printer/                # ESC/POS driver for Partner Tech RP-630 USB (escpos.js)
 │   ├── reports/                # PDF renderer + composers (pdf-renderer, pdf-dsr, pdf-checkout, pdf-paid-outs, pdf-custom)
 │   ├── sync/                   # Supabase sync daemon (30s cycle, 7 data types)
 ├── docs/
@@ -165,7 +166,7 @@ BOH uses the same design tokens as the terminal but optimized for desktop/laptop
 
 | Aspect | FOH (Terminal) | BOH (Back Office) |
 |---|---|---|
-| Target device | Elo EloPOS 22" Linux AIO (1920x1080 touch) | Desktop/laptop browser |
+| Target device | Elo EloPOS 22" AIO, Ubuntu 22.04 + Chromium kiosk (1920x1080 touch) | Desktop/laptop browser |
 | Layout | Touch-optimized, single-page | Desktop nav, multi-page feel |
 | Data scope | Current session (in-memory + local PG) | Historical (local PG via REST API + Supabase) |
 | Write access | Orders, tabs, payments, clock | Menu config, security groups, reports |

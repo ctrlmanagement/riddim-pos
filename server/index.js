@@ -39,6 +39,7 @@ const reportsRouter = require('./routes/reports');
 const syncRouter = require('./routes/sync');
 const paidOutsRouter = require('./routes/paid-outs');
 const sessionsRouter = require('./routes/sessions');
+const printerRouter = require('./routes/printer');
 
 app.use('/api/orders', ordersRouter);
 app.use('/api/clock', clockRouter);
@@ -48,6 +49,7 @@ app.use('/api/reports', reportsRouter);
 app.use('/api/sync', syncRouter);
 app.use('/api/paid-outs', paidOutsRouter);
 app.use('/api/sessions', sessionsRouter);
+app.use('/api/printer', printerRouter);
 
 // Health check
 app.get('/api/health', async (req, res) => {

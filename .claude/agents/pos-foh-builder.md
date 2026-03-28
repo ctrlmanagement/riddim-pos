@@ -11,7 +11,8 @@
 - **Local Server:** Node.js + Express + Socket.IO on port 3000 (`server/index.js`)
 - **Local DB:** PostgreSQL 16 (`riddim_pos`) — orders, payments, audit, clock
 - **Cloud DB:** Supabase (`cbvryfgrqzdvbqigyrgh`) — menu, staff, security groups, config
-- **Target hardware:** Elo EloPOS 22" Linux AIO (1920x1080 landscape), also runs in desktop browser for dev
+- **Target hardware:** Elo EloPOS 22" AIO running Ubuntu 22.04 + Chromium kiosk (1920x1080 landscape), also runs in desktop browser for dev
+- **Receipt printer:** Partner Tech RP-630 USB (ESC/POS via `usb` npm, driver at `server/printer/escpos.js`, API at `/api/printer/*`)
 - **Server link:** `terminal/js/server-link.js` — auto-detects local server, mirrors all actions to REST API + Socket.IO
 
 ### Key POS Tables (Supabase)
@@ -123,6 +124,7 @@ BAR4 (Bar 4, POS 4), BAR5 (SVC, POS 7), LR (Liquor Room, no POS)
 | Tab hydration | Done S79 | hydrateTabsFromServer() loads today's orders from local PG on login |
 | Reopen permissions | Done S79 | tab.reopen + tab.reopen_deposit (live Supabase check) |
 | $0 checkout | Done S79 | PAY always enabled — comps, voids, exact cash, deposit-only |
+| Receipt printing | Done S83 | ESC/POS to RP-630 USB. Server API: POST /api/printer/receipt, /test, /open-drawer. TERM02 working, TERM03 needs print agent |
 
 ---
 

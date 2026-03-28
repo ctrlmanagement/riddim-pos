@@ -1,8 +1,8 @@
 # RIDDIM POS — Claude Code Project Context
-**AG Entertainment | S79 | March 26, 2026**
+**AG Entertainment | S83 | March 28, 2026**
 
 ## What This Project Is
-Custom point-of-sale system for RIDDIM Supper Club (Atlanta, GA). Local-first architecture: on-premise server + Android tablet terminals. Integrates with the existing RIDDIM Supabase backend (51 tables — membership, inventory, P&L, events, bookings, ticketing).
+Custom point-of-sale system for RIDDIM Supper Club (Atlanta, GA). Local-first architecture: on-premise server + Elo EloPOS 22" AIO terminals running Ubuntu 22.04 + Chromium kiosk. Integrates with the existing RIDDIM Supabase backend (51 tables — membership, inventory, P&L, events, bookings, ticketing).
 
 **Repo:** `https://github.com/ctrlmanagement/riddim-pos` (PRIVATE)
 **Parent project:** `https://github.com/ctrlmanagement/RiddimSupperClub`
@@ -19,18 +19,18 @@ Custom point-of-sale system for RIDDIM Supper Club (Atlanta, GA). Local-first ar
 │  Members, Events, Menu, Inventory, P&L, Bookings    │
 │  51 existing tables + ~11 new POS tables             │
 └──────────────────────┬──────────────────────────────┘
-                       │ HTTPS sync (app-level)
-                       │ Supabase Realtime (menu/member updates)
+                       │ HTTPS sync (app-level, 30s)
 ┌──────────────────────┴──────────────────────────────┐
-│              LOCAL SERVER (Mac Mini M4)               │
-│  Node.js + PostgreSQL                                │
+│         LOCAL SERVER (Elo EloPOS — TERM02)            │
+│  Node.js 20 + PostgreSQL 16 + systemd service        │
 │  Order engine, tab management, payment processing    │
 │  Socket.IO hub for all terminals                     │
+│  ESC/POS printer driver (Partner Tech RP-630 USB)    │
 └──────┬───────┬───────┬───────┬───────┬──────────────┘
        │       │       │       │       │  LAN (Socket.IO)
     ┌──┴──┐ ┌──┴──┐ ┌──┴──┐ ┌──┴──┐ ┌──┴──┐
-    │BAR1 │ │BAR2 │ │BAR3 │ │BAR4 │ │ SVC │  Android tablets
-    └─────┘ └─────┘ └─────┘ └─────┘ └─────┘  (WebView terminal)
+    │BAR1 │ │BAR2 │ │BAR3 │ │BAR4 │ │ SVC │  Elo EloPOS 22" AIO
+    └─────┘ └─────┘ └─────┘ └─────┘ └─────┘  (Ubuntu + Chromium kiosk)
                        │
                     ┌──┴──┐
                     │ KDS │  Kitchen/Bar display
@@ -40,22 +40,35 @@ Custom point-of-sale system for RIDDIM Supper Club (Atlanta, GA). Local-first ar
 ## Technology Stack
 | Layer | Technology |
 |---|---|
-| Local Server | Node.js + Express + Socket.IO |
+| Local Server | Node.js 20 + Express + Socket.IO (systemd service on TERM02) |
 | Local Database | PostgreSQL 16 |
 | Cloud Database | Supabase PostgreSQL (shared with RIDDIM platform) |
-| Sync | Application-level (Node.js daemon, HTTPS to Supabase) |
-| Terminal App | Android WebView hybrid (HTML/CSS/JS served by local server) |
-| Payment | Stripe Terminal SDK (Android) |
-| Printing | ESC/POS via Star Micronics / Epson SDK |
-| KDS | WebView on Android tablet, Supabase Realtime |
-| Hardware | Sunmi T3 Pro Max (terminals), Stripe Reader S700 |
+| Sync | Application-level (Node.js daemon, HTTPS to Supabase, 30s cycle) |
+| Terminal App | Chromium kiosk on Ubuntu 22.04 (HTML/CSS/JS served by local server) |
+| Payment | Stripe Terminal SDK (Phase 3) |
+| Printing | ESC/POS via `usb` npm package → Partner Tech RP-630 USB |
+| KDS | WebView on tablet, Supabase Realtime (Phase 4) |
+| Hardware | Elo EloPOS 22" AIO (terminals), Partner Tech RP-630 (receipt printers), U.are.U 4500 (fingerprint, pending) |
+
+## Deployed Terminals
+| Name | IP | Role | Printer | Status |
+|---|---|---|---|---|
+| TERM02 | 10.77.2.53 | POS server + kiosk | RP-630 (working) | Live |
+| TERM03 | 10.77.2.68 | Kiosk client | RP-630 (needs print agent) | Live |
+| MacBook | 10.77.2.70 | Dev only | — | Dev |
 
 ## Folder Structure
 ```
 riddim-pos/
 ├── server/           # Node.js local server (order engine, sync, Socket.IO)
-├── terminal/         # Staff-facing terminal UI (HTML/CSS/JS, served via WebView)
+│   ├── routes/       # REST API (orders, clock, transactions, audit, reports, sync, paid-outs, sessions, printer)
+│   ├── printer/      # ESC/POS driver for Partner Tech RP-630 (escpos.js)
+│   ├── reports/      # PDF renderer + composers (DSR, checkout, paid-outs, custom)
+│   ├── sync/         # Supabase sync daemon
+│   └── sockets/      # Socket.IO terminal events
+├── terminal/         # Staff-facing terminal UI (HTML/CSS/JS, Chromium kiosk)
 ├── kds/              # Kitchen/Bar display system
+├── provisioning/     # Ubuntu setup scripts (setup-terminal.sh, setup-server.sh)
 ├── docs/             # Architecture docs, specs
 ├── _reference/       # Odoo POS source for study (not deployed)
 │   └── odoo-pos/     # addons/point_of_sale + pos_restaurant
@@ -132,4 +145,6 @@ Phase 4: KDS — kitchen/bar display routing
 Phase 5: Sync — COMPLETE (S80) — local PG → Supabase every 30s, 7 data types
 Phase 5.5: Paid outs + P&L export — COMPLETE (S81) — paid out recording, day close → daily_payouts, reports, PDF engine
 Phase 5.6: Report security gating — COMPLETE (S82) — per-tab permission tiers, mgmt.view_dsr permission key
+Phase 5.7: Hardware provisioning — COMPLETE (S83) — Ubuntu 22.04 on Elo terminals, Chromium kiosk, systemd server, receipt printer driver
 Phase 6: Integration — inventory, P&L auto-connect (core P&L done, inventory pending)
+Phase 6.5: Printing — IN PROGRESS (S83) — ESC/POS driver for RP-630, server API done, TERM03 print agent pending
