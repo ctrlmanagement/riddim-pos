@@ -8,7 +8,7 @@
 function renderMgmtServers() {
   const staffMap = {};
   STAFF.forEach(s => staffMap[s.id] = s.name);
-  const myLevel = getRoleLevel(currentUser.role);
+  const myLevel = getRoleLevel(currentUser);
 
   // Group visible open tabs by creator (role-filtered)
   const serverTabs = {};
@@ -544,11 +544,11 @@ async function closeDay() {
 
 function renderMgmtStaffManage() {
   const list = document.getElementById('mgmtStaffManageList');
-  const myLevel = getRoleLevel(currentUser.role);
+  const myLevel = getRoleLevel(currentUser);
 
   // Staff at or below current user's role level (never higher)
   const manageable = STAFF.filter(s =>
-    s.id !== currentUser.id && getRoleLevel(s.role) < myLevel
+    s.id !== currentUser.id && getRoleLevel(s) < myLevel
   );
 
   // Determine who is clocked in

@@ -28,6 +28,7 @@ let STAFF = [];
 let MENU_CATEGORIES = [];
 let MENU_ITEMS = [];
 let STATIONS = [];
+let SECURITY_GROUPS = []; // { id, name }
 
 // ═══════════════════════════════════════════
 // DATA LOADING
@@ -121,6 +122,14 @@ async function loadMenuItems() {
   if (error) console.error('Menu items load error:', error);
 }
 
+async function loadSecurityGroups() {
+  const { data, error } = await sb
+    .from('pos_security_groups')
+    .select('id, name');
+  if (data) SECURITY_GROUPS = data;
+  if (error) console.error('Security groups load error:', error);
+}
+
 async function loadStations() {
   const { data, error } = await sb
     .from('pos_stations')
@@ -148,8 +157,18 @@ async function loadAllData() {
     loadCategories(),
     loadMenuItems(),
     loadStations(),
+    loadSecurityGroups(),
     typeof loadTableMinimums === 'function' ? loadTableMinimums() : Promise.resolve(),
   ]);
+
+  // Map security group names to staff for role hierarchy
+  const groupMap = {};
+  SECURITY_GROUPS.forEach(g => groupMap[g.id] = g.name);
+  STAFF.forEach(s => {
+    if (s.securityGroupId && groupMap[s.securityGroupId]) {
+      s.groupName = groupMap[s.securityGroupId].toLowerCase();
+    }
+  });
 }
 
 // ═══════════════════════════════════════════
@@ -169,24 +188,27 @@ let nextTabNum = 1;
 const ROLE_LEVEL = {
   barback: 1, hostess: 1, kitchen: 1,
   bartender: 2, cashier: 2, server: 2, waitress: 2,
+  'riddim bartender': 2,
   manager: 3,
   gm: 4,
   owner: 5,
 };
 
-function getRoleLevel(role) {
-  return ROLE_LEVEL[(role || '').toLowerCase()] || 2;
-}
-
-// Can the viewer see/manage the target staff member?
-// Same level only if it's yourself; otherwise must be strictly higher
-function canViewStaff(viewerRole, targetRole) {
-  return getRoleLevel(viewerRole) > getRoleLevel(targetRole);
+// Get role level for a staff member — uses security group name first, then pos_role
+function getRoleLevel(roleOrStaff) {
+  if (typeof roleOrStaff === 'object' && roleOrStaff !== null) {
+    // Staff object — check groupName first (from security group), then pos_role
+    const groupLevel = ROLE_LEVEL[(roleOrStaff.groupName || '').toLowerCase()];
+    if (groupLevel) return groupLevel;
+    return ROLE_LEVEL[(roleOrStaff.role || '').toLowerCase()] || 2;
+  }
+  // Plain string role
+  return ROLE_LEVEL[(roleOrStaff || '').toLowerCase()] || 2;
 }
 
 // Filter tabs visible to the current user based on role hierarchy
 function getVisibleTabs(statusFilter) {
-  const myLevel = getRoleLevel(currentUser.role);
+  const myLevel = getRoleLevel(currentUser);
   const viewAll = hasPermission('tab.view_all');
 
   return tabs.filter(t => {
@@ -198,7 +220,7 @@ function getVisibleTabs(statusFilter) {
     // With view_all, see same-level and below (never above)
     const creator = STAFF.find(s => s.id === t.createdBy);
     if (!creator) return true; // unknown creator — show
-    return getRoleLevel(creator.role) <= myLevel;
+    return getRoleLevel(creator) <= myLevel;
   });
 }
 
