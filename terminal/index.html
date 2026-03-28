@@ -758,6 +758,21 @@
 <script src="js/screensaver.js"></script>
 
 <!-- ════════════════════════════════════════
+     CONFIRM DIALOG
+     ════════════════════════════════════════ -->
+<div id="confirmModal" class="modal-overlay">
+  <div class="modal confirm-modal">
+    <div class="modal-body" style="padding:24px;text-align:center">
+      <div id="confirmMessage" style="font-size:16px;margin-bottom:24px;color:var(--ivory);line-height:1.5"></div>
+      <div style="display:flex;gap:12px;justify-content:center">
+        <button id="confirmCancel" class="confirm-btn confirm-cancel">CANCEL</button>
+        <button id="confirmOk" class="confirm-btn confirm-ok">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
      SCREENSAVER OVERLAY
      ════════════════════════════════════════ -->
 <div id="screensaver">

@@ -49,3 +49,27 @@
 }
 
 .modal-body { padding: 20px; }
+
+.confirm-modal { width: 380px; }
+.confirm-btn {
+  flex: 1;
+  height: 48px;
+  border-radius: var(--radius);
+  font-family: var(--font-label);
+  font-size: 16px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.confirm-ok {
+  background: var(--gold);
+  color: var(--obsidian);
+  border: none;
+}
+.confirm-ok:active { background: var(--gold-bright); }
+.confirm-cancel {
+  background: transparent;
+  color: var(--ivory-dim);
+  border: 1px solid var(--surface-active);
+}
+.confirm-cancel:active { background: var(--surface); }

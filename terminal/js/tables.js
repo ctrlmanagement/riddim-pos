@@ -533,7 +533,7 @@ async function tableClick(tableNum) {
     t.tableNum === tableNum && t.status === 'closed' && t.bookingId
   );
   if (closedWithBooking) {
-    const reopen = confirm(`Table ${tableNum} has a closed check with a booking deposit. Reopen it instead of creating a new tab?`);
+    const reopen = await posConfirm(`Table ${tableNum} has a closed check with a booking deposit. Reopen it instead of creating a new tab?`);
     if (reopen) {
       if (typeof reopenCheck === 'function') {
         await reopenCheck(closedWithBooking.id);

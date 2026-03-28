@@ -486,7 +486,7 @@ async function renderMgmtDayClose() {
 
 async function closeDay() {
   // Confirm
-  if (!confirm('Close the day and push P&L data to Supabase? This cannot be undone.')) return;
+  if (!await posConfirm('Close the day and push P&L data to Supabase? This cannot be undone.')) return;
 
   const result = await serverPost('/api/sessions/close', {
     closed_by: currentUser.id,

@@ -207,6 +207,27 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// Custom confirm dialog (replaces browser confirm() which shows server URL)
+function posConfirm(message) {
+  return new Promise((resolve) => {
+    const el = document.getElementById('confirmModal');
+    document.getElementById('confirmMessage').textContent = message;
+    const okBtn = document.getElementById('confirmOk');
+    const cancelBtn = document.getElementById('confirmCancel');
+    const cleanup = (result) => {
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      closeModal('confirmModal');
+      resolve(result);
+    };
+    const onOk = () => cleanup(true);
+    const onCancel = () => cleanup(false);
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    openModal('confirmModal');
+  });
+}
+
 // ═══════════════════════════════════════════
 // NEW TAB MODAL
 // ═══════════════════════════════════════════
