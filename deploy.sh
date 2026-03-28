@@ -22,7 +22,7 @@ ssh "$TERM02" "cd $REPO_DIR && git pull && sudo systemctl restart riddim-pos" &&
 echo "[TERM03] Updating print agent..."
 scp -q print-agent/agent.js print-agent/escpos.js print-agent/package.json \
   "$TERM03:$AGENT_DIR/"
-ssh "$TERM03" "sudo systemctl restart riddim-print-agent" && \
+ssh "$TERM03" "sudo systemctl restart riddim-print-agent && sudo systemctl restart lightdm" && \
   echo "[TERM03] Done" || echo "[TERM03] FAILED"
 
 echo ""
