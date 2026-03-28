@@ -60,8 +60,9 @@ One-command terminal management from Mac:
 - **Passwordless sudo** — `/etc/sudoers.d/riddim-deploy` on both terminals for `systemctl restart` (riddim-pos, riddim-print-agent, lightdm) and `shutdown`
 - **Timezone** — both terminals set to `America/New_York`
 - **Terminal name** — URL param `?terminal=TERM02` in kiosk-start.sh, shown on login screen
-- **Refresh button** — subtle ↻ button top-right of login screen for UI reload without SSH
+- **Refresh button** — subtle ↻ button top-right of login screen for UI reload without SSH (tested, confirmed working — deploy to server, tap refresh, UI updates instantly)
 - **Station selector removed** from login screen — replaced with terminal name
+- **Custom confirm modal** — replaced browser `confirm()` (which showed server IP) with styled `posConfirm()` using RIDDIM modal system. Applied to day close and table reopen dialogs.
 
 ---
 
@@ -79,7 +80,10 @@ One-command terminal management from Mac:
 | `terminal/js/receipt.js` | PRINT button handler, `_lastReceiptTab` |
 | `terminal/js/screensaver.js` | NEW — idle screensaver logic |
 | `terminal/js/login.js` | Screensaver hooks, terminal name display |
-| `terminal/js/core.js` | `TERMINAL_NAME` from URL param |
+| `terminal/js/core.js` | `TERMINAL_NAME` from URL param, `posConfirm()` custom dialog |
+| `terminal/js/mgmt-operations.js` | Day close uses `posConfirm()` instead of `confirm()` |
+| `terminal/js/tables.js` | Table reopen uses `posConfirm()` instead of `confirm()` |
+| `shared/css/modals.css` | Confirm button styles |
 | `terminal/css/screensaver.css` | NEW — breathing logo animation |
 | `terminal/css/receipt.css` | `.receipt-print-btn` styles |
 | `terminal/css/login.css` | `.login-refresh-btn` styles |
