@@ -1,5 +1,5 @@
 # RIDDIM POS — Claude Code Project Context
-**AG Entertainment | S90 | March 29, 2026**
+**AG Entertainment | S91 | March 29, 2026**
 
 ## What This Project Is
 Custom point-of-sale system for RIDDIM Supper Club (Atlanta, GA). Local-first architecture: on-premise server + Elo EloPOS 22" AIO terminals running Ubuntu 22.04 + Chromium kiosk. Integrates with the existing RIDDIM Supabase backend (51 tables — membership, inventory, P&L, events, bookings, ticketing).
@@ -194,3 +194,5 @@ Phase 10.2: BOH menu management — PENDING — subcategory/recipe/modifier CRUD
 Phase 10.3: Inventory linking — COMPLETE (S90) — P0a/P0b/P0c inv_product_id on 102 menu items + 12 modifiers + terminal spirit swap
 Phase 10.4: Deduction engine — COMPLETE (S90) — pos_theoretical_usage table, day close aggregation, owner portal POS Variance view
 Phase 10.5: BOH menu management enhanced — COMPLETE (S90) — inv_product_id dropdown, subcategory field in add/edit modal
+Phase 10.6: Dynamic spirit upgrades — COMPLETE (S91) — context-aware spirit picker (base_spirit_category_id), rolled-up pricing (max(0, spirit-cocktail+2)), 29 cocktails linked
+Phase 10.7: P2 QoL — COMPLETE (S91) — recipe editor (BUILD/METHOD/GLASSWARE/GARNISH in add/edit modal), PRODUCTS panel (bottle price/cost/PAR editing), modifier CRUD panel (add/edit/delete groups + options), base spirit category dropdown
