@@ -25,7 +25,7 @@ function generate(data) {
   kvRow(doc, h, 'Less Comps', $(-d.comp_total), { isNegative: d.comp_total > 0 });
   kvRow(doc, h, 'Net Sales', $(d.net_sales), { isTotal: true });
   kvRow(doc, h, 'Sales Tax', $(d.sales_tax));
-  kvRow(doc, h, 'Service Fees (Auto-Grat)', $(d.service_fees));
+  kvRow(doc, h, 'Service Charge', $(d.service_fees));
   kvRow(doc, h, 'Gross Revenue', $(d.gross_revenue), { isTotal: true });
   spacer(doc, h);
   kvRow(doc, h, 'Checks Closed', String(d.order_count));

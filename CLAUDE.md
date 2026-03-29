@@ -118,7 +118,7 @@ const BAR_CONFIG = [
 7. **RIDDIM design system applies.** Obsidian/gold/ivory palette, Bebas Neue labels, DM Sans body.
 8. **Deposit is a split payment.** Payment #1 = deposit, #2 = balance. Unused deposit → OTHER INCOME. (S79)
 9. **Tab/session not created until first item or reservation seat.** No blank tables in DB. (S79)
-10. **Min spend includes tax, no gratuity.** Subtotal + tax determines minimum met. (S79)
+10. **Min spend includes tax, no service charge.** Subtotal + tax determines minimum met. (S79)
 11. **tab.reopen_deposit is separate from tab.reopen.** Owner-only by default. (S79)
 12. **booking_id stored on pos_orders.** Required for deposit to survive terminal restart. (S79)
 13. **Reopen permissions checked live from Supabase.** Not from login-time cache. (S79)

@@ -159,9 +159,9 @@ function applyPermissionUI() {
   const voidBtn = document.getElementById('btnVoid');
   if (voidBtn) voidBtn.style.display = hasPermission('order.void_tab') ? '' : 'none';
 
-  // Edit check button (comp/discount/gratuity)
+  // Edit check button (comp/discount/service charge)
   const editBtn = document.getElementById('btnEditCheck');
-  if (editBtn) editBtn.style.display = (hasPermission('order.comp') || hasPermission('order.discount') || hasPermission('tab.set_gratuity') || hasPermission('tab.edit_name')) ? '' : 'none';
+  if (editBtn) editBtn.style.display = (hasPermission('order.comp') || hasPermission('order.discount') || hasPermission('tab.auto_service_charge') || hasPermission('tab.edit_name')) ? '' : 'none';
 
   // 86 badge/button
   const eightySixBtn = document.getElementById('btn86');
@@ -236,6 +236,13 @@ async function shutdownTerminal() {
 
 function logout() {
   stopIdleTimer();
+  // Clean up Act As state
+  if (actingAs) {
+    actingAs = null;
+    realUser = null;
+    const banner = document.getElementById('actAsBanner');
+    if (banner) banner.remove();
+  }
   currentUser = null;
   showScreen('login');
   initLogin();

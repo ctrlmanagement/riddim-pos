@@ -2,59 +2,66 @@
 'use strict';
 
 // ═══════════════════════════════════════════
-// VIEW SERVERS — all open tabs by server
+// VIEW SERVERS — staff list with Act As
 // ═══════════════════════════════════════════
 
 let _serversSearchTerm = '';
 
 function renderMgmtServers() {
-  const staffMap = {};
-  STAFF.forEach(s => staffMap[s.id] = s.name);
   const myLevel = getRoleLevel(currentUser);
-
   const search = _serversSearchTerm.toLowerCase();
-
-  // Group visible open tabs by creator (role-filtered)
-  const serverTabs = {};
-  getVisibleTabs(['open', 'sent']).forEach(t => {
-    if (search && !t.name.toLowerCase().includes(search) && !(staffMap[t.createdBy] || '').toLowerCase().includes(search)) return;
-    const id = t.createdBy;
-    const name = staffMap[id] || 'Unknown';
-    if (!serverTabs[id]) serverTabs[id] = { name, tabs: [] };
-    serverTabs[id].tabs.push(t);
-  });
-
   const list = document.getElementById('mgmtServersList');
-  const servers = Object.values(serverTabs);
+
+  // Get staff below current user's auth level (strict — never equal or above)
+  const visible = STAFF.filter(s => {
+    if (!s.active) return false;
+    const sLevel = getRoleLevel(s);
+    if (sLevel >= myLevel) return false;
+    if (search && !s.name.toLowerCase().includes(search)) return false;
+    return true;
+  }).sort((a, b) => getRoleLevel(b) - getRoleLevel(a)); // highest first
 
   // Search bar
-  let searchHtml = `<div style="margin-bottom:12px"><input type="text" placeholder="Search tabs or servers..." value="${_serversSearchTerm}"
+  let html = `<div style="margin-bottom:12px"><input type="text" placeholder="Search staff..." value="${_serversSearchTerm}"
     oninput="_serversSearchTerm=this.value;renderMgmtServers()" style="width:100%;height:36px;padding:0 10px;border:1px solid var(--surface);border-radius:var(--radius);background:var(--obsidian-mid);color:var(--ivory);font-size:13px;outline:none;"></div>`;
 
-  if (servers.length === 0) {
-    list.innerHTML = searchHtml + '<div class="mgmt-empty">No open tabs</div>';
+  if (visible.length === 0) {
+    list.innerHTML = html + '<div class="mgmt-empty">No staff below your clearance level</div>';
     return;
   }
 
-  list.innerHTML = searchHtml + servers.map(s => {
-    const totalSales = s.tabs.reduce((sum, t) => sum + tabTotal(t), 0);
+  html += visible.map(s => {
+    const level = getRoleLevel(s);
+    const groupName = s.groupName || 'unassigned';
+    const openTabs = tabs.filter(t => t.createdBy === s.id && (t.status === 'open' || t.status === 'sent'));
+    const closedTabs = tabs.filter(t => t.createdBy === s.id && (t.status === 'closed' || t.status === 'paid'));
+    const totalSales = openTabs.reduce((sum, t) => sum + tabTotal(t), 0);
+
     return `
       <div class="server-card">
-        <div class="server-card-header">
-          <span class="server-card-name">${s.name}</span>
-          <span class="server-card-stat">${s.tabs.length} tabs — $${totalSales.toFixed(2)}</span>
+        <div class="server-card-header" style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <span class="server-card-name">${s.name}</span>
+            <span style="font-size:11px;color:var(--ash);margin-left:8px;">L${level} ${groupName}</span>
+          </div>
+          <button onclick="enterActAs('${s.id}')" style="background:var(--gold);color:var(--obsidian);border:none;border-radius:4px;padding:5px 14px;font-family:var(--font-label);font-size:12px;letter-spacing:0.1em;cursor:pointer;">ACT AS</button>
         </div>
-        <div class="server-card-tabs">
-          ${s.tabs.map(t => `
+        <div class="server-card-stat" style="padding:0 12px 4px;font-size:12px;color:var(--ash);">
+          ${openTabs.length} open tab${openTabs.length !== 1 ? 's' : ''} — $${totalSales.toFixed(2)} | ${closedTabs.length} closed
+        </div>
+        ${openTabs.length > 0 ? `<div class="server-card-tabs">
+          ${openTabs.map(t => `
             <div class="server-tab-row" onclick="mgmtSelectTab('${t.id}')">
               <span>${t.name}</span>
               <span>$${tabTotal(t).toFixed(2)}</span>
             </div>
           `).join('')}
-        </div>
+        </div>` : ''}
       </div>
     `;
   }).join('');
+
+  list.innerHTML = html;
 }
 
 function mgmtSelectTab(tabId) {
@@ -70,10 +77,12 @@ function mgmtSelectTab(tabId) {
 
 function renderMgmtClock() {
   const list = document.getElementById('mgmtClockList');
+  const myLevel = getRoleLevel(currentUser);
 
-  // Build per-staff status from clockEntries (defined in clock.js)
+  // Build per-staff status from clockEntries — only staff below current user's level
   const staffStatus = {};
   STAFF.forEach(s => {
+    if (getRoleLevel(s) >= myLevel && s.id !== currentUser.id) return;
     staffStatus[s.id] = { name: s.name, role: s.role, entries: [], status: 'out' };
   });
 

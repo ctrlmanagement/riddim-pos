@@ -2,7 +2,7 @@
 'use strict';
 
 // ═══════════════════════════════════════════
-// EDIT CHECK — Comp, Discount, Gratuity, Tab Name
+// EDIT CHECK — Comp, Discount, Service Charge, Tab Name
 // ═══════════════════════════════════════════
 
 function openEditCheck() {
@@ -235,21 +235,22 @@ function ecRemoveDiscount() {
   showToast('Discount removed');
 }
 
-// Auto-Gratuity
+// Service Charge
 function ecGratuity() {
   const tab = getActiveTab();
   if (!tab) return;
 
   document.getElementById('ecPanel').innerHTML = `
     <div class="ec-form">
-      <div class="ec-subtitle">AUTO-GRATUITY</div>
+      <div class="ec-subtitle">SERVICE CHARGE</div>
+      <div style="font-size:11px;color:var(--ash);margin-bottom:8px;">Split: 15% → Tips, 5% → Alt Fees</div>
       <div class="ec-discount-btns">
         <button class="ec-disc-btn ${tab.autoGrat === 0.18 ? 'selected' : ''}" onclick="ecApplyGrat(0.18)">18%</button>
         <button class="ec-disc-btn ${tab.autoGrat === 0.20 ? 'selected' : ''}" onclick="ecApplyGrat(0.20)">20%</button>
         <button class="ec-disc-btn ${tab.autoGrat === 0.22 ? 'selected' : ''}" onclick="ecApplyGrat(0.22)">22%</button>
         <button class="ec-disc-btn ${tab.autoGrat === 0.25 ? 'selected' : ''}" onclick="ecApplyGrat(0.25)">25%</button>
       </div>
-      ${tab.autoGrat ? '<div class="ec-current">Auto-gratuity: ' + (tab.autoGrat * 100).toFixed(0) + '% <button class="ec-remove-btn" onclick="ecRemoveGrat()">REMOVE</button></div>' : ''}
+      ${tab.autoGrat ? '<div class="ec-current">Service charge: ' + (tab.autoGrat * 100).toFixed(0) + '% <button class="ec-remove-btn" onclick="ecRemoveGrat()">REMOVE</button></div>' : ''}
     </div>`;
 }
 
@@ -260,7 +261,7 @@ function ecApplyGrat(pct) {
 
   closeModal('editCheckModal');
   renderCart();
-  showToast('Auto-gratuity ' + (pct * 100).toFixed(0) + '% applied');
+  showToast('Service charge ' + (pct * 100).toFixed(0) + '% applied');
 }
 
 function ecRemoveGrat() {
@@ -270,7 +271,7 @@ function ecRemoveGrat() {
 
   closeModal('editCheckModal');
   renderCart();
-  showToast('Auto-gratuity removed');
+  showToast('Service charge removed');
 }
 
 // ═══════════════════════════════════════════

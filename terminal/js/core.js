@@ -137,7 +137,7 @@ async function loadMenuItems() {
 async function loadSecurityGroups() {
   const { data, error } = await sb
     .from('pos_security_groups')
-    .select('id, name');
+    .select('id, name, auth_level');
   if (data) SECURITY_GROUPS = data;
   if (error) console.error('Security groups load error:', error);
 }
@@ -197,12 +197,20 @@ async function loadAllData() {
     typeof loadTableMinimums === 'function' ? loadTableMinimums() : Promise.resolve(),
   ]);
 
-  // Map security group names to staff for role hierarchy
+  // Build ROLE_LEVEL dynamically from security groups
+  ROLE_LEVEL = {};
   const groupMap = {};
-  SECURITY_GROUPS.forEach(g => groupMap[g.id] = g.name);
+  SECURITY_GROUPS.forEach(g => {
+    groupMap[g.id] = g;
+    if (g.name && g.auth_level) ROLE_LEVEL[g.name.toLowerCase()] = g.auth_level;
+  });
+
+  // Map security group data to staff for role hierarchy
   STAFF.forEach(s => {
     if (s.securityGroupId && groupMap[s.securityGroupId]) {
-      s.groupName = groupMap[s.securityGroupId].toLowerCase();
+      const grp = groupMap[s.securityGroupId];
+      s.groupName = grp.name.toLowerCase();
+      s.authLevel = grp.auth_level || 0;
     }
   });
 }
@@ -212,38 +220,145 @@ async function loadAllData() {
 // ═══════════════════════════════════════════
 
 let currentUser = null;
+let actingAs = null;      // When set, operating as this staff member
+let realUser = null;       // The actual logged-in user (preserved during Act As)
 let tabs = [];
 let activeTabId = null;
 let activeCategory = null; // set after categories load
 let nextTabNum = 1;
 
 // ═══════════════════════════════════════════
+// ACT AS — Impersonation Mode
+// ═══════════════════════════════════════════
+
+// Returns the effective user for tab/order attribution
+function getEffectiveUser() {
+  return actingAs || currentUser;
+}
+
+// Returns the effective user ID for createdBy / addedBy fields
+function getEffectiveUserId() {
+  return actingAs ? actingAs.id : currentUser.id;
+}
+
+async function enterActAs(staffId) {
+  const target = STAFF.find(s => s.id === staffId);
+  if (!target) { showToast('Staff not found', 'error'); return; }
+
+  const myLevel = getRoleLevel(currentUser);
+  const targetLevel = getRoleLevel(target);
+  if (targetLevel >= myLevel) {
+    showToast('Cannot act as equal or higher clearance', 'error');
+    return;
+  }
+
+  // Save real user and enter impersonation
+  realUser = currentUser;
+  actingAs = target;
+
+  // Show banner
+  renderActAsBanner();
+
+  // Filter tabs to show only the target's tabs
+  activeTabId = null;
+  renderTabs();
+  renderCart();
+  switchView('terminal');
+
+  showToast('Acting as ' + target.name, 'success');
+}
+
+function exitActAs() {
+  if (!actingAs) return;
+  const name = actingAs.name;
+  actingAs = null;
+  realUser = null;
+
+  // Remove banner
+  const banner = document.getElementById('actAsBanner');
+  if (banner) banner.remove();
+
+  // Restore normal view
+  activeTabId = null;
+  renderTabs();
+  renderCart();
+  switchView('management');
+
+  showToast('Exited Act As — back to ' + currentUser.name, 'success');
+}
+
+function renderActAsBanner() {
+  // Remove existing
+  let banner = document.getElementById('actAsBanner');
+  if (banner) banner.remove();
+
+  banner = document.createElement('div');
+  banner.id = 'actAsBanner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(90deg,#D4A843,#B8922F);color:#0A0A0A;display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 16px;font-family:var(--font-label);font-size:13px;letter-spacing:0.15em;z-index:10000;';
+  banner.innerHTML = `ACTING AS: <strong>${actingAs.name.toUpperCase()}</strong> (L${actingAs.authLevel || '?'})` +
+    ` <span style="font-size:11px;opacity:0.7;margin-left:8px;">by ${realUser.name}</span>` +
+    ` <button onclick="actAsCheckout()" style="margin-left:16px;background:#0A0A0A;color:#D4A843;border:none;border-radius:4px;padding:4px 14px;font-family:var(--font-label);font-size:12px;letter-spacing:0.1em;cursor:pointer;">CHECKOUT</button>` +
+    ` <button onclick="actAsClockOut()" style="background:#0A0A0A;color:var(--red,#E74C3C);border:none;border-radius:4px;padding:4px 14px;font-family:var(--font-label);font-size:12px;letter-spacing:0.1em;cursor:pointer;">CLOCK OUT</button>` +
+    ` <button onclick="exitActAs()" style="background:#0A0A0A;color:#D4A843;border:none;border-radius:4px;padding:4px 14px;font-family:var(--font-label);font-size:12px;letter-spacing:0.1em;cursor:pointer;">EXIT</button>`;
+
+  // Push content down
+  const topBar = document.querySelector('.top-bar');
+  if (topBar) topBar.parentNode.insertBefore(banner, topBar);
+}
+
+// Check if currently in Act As mode
+function isActingAs() {
+  return actingAs !== null;
+}
+
+// Run checkout report for the Act As target
+function actAsCheckout() {
+  if (!actingAs) return;
+  if (typeof showStaffCheckout === 'function') {
+    pendingClockOutStaff = null; // view only, don't auto clock out
+    showStaffCheckout(actingAs);
+  }
+}
+
+// Clock out the Act As target
+function actAsClockOut() {
+  if (!actingAs) return;
+  if (typeof mgmtForceClockOut === 'function') {
+    mgmtForceClockOut(actingAs.id);
+  }
+}
+
+// ═══════════════════════════════════════════
 // ROLE HIERARCHY
 // ═══════════════════════════════════════════
 
-const ROLE_LEVEL = {
-  barback: 1, hostess: 1, kitchen: 1,
-  bartender: 2, cashier: 2, server: 2, waitress: 2,
-  'riddim bartender': 2,
-  manager: 3,
-  gm: 4,
-  owner: 5,
-};
+// Auth levels — built dynamically from pos_security_groups at boot
+let ROLE_LEVEL = {};
 
-// Get role level for a staff member — uses security group name first, then pos_role
+// Get role level for a staff member — uses auth_level from security group first, then name fallback
 function getRoleLevel(roleOrStaff) {
   if (typeof roleOrStaff === 'object' && roleOrStaff !== null) {
-    // Staff object — check groupName first (from security group), then pos_role
+    // Check auth_level from security group first (numeric, authoritative)
+    if (roleOrStaff.authLevel) return roleOrStaff.authLevel;
+    // Fallback: match group name against ROLE_LEVEL
     const groupLevel = ROLE_LEVEL[(roleOrStaff.groupName || '').toLowerCase()];
     if (groupLevel) return groupLevel;
-    return ROLE_LEVEL[(roleOrStaff.role || '').toLowerCase()] || 2;
+    return ROLE_LEVEL[(roleOrStaff.role || '').toLowerCase()] || 7;
   }
   // Plain string role
-  return ROLE_LEVEL[(roleOrStaff || '').toLowerCase()] || 2;
+  return ROLE_LEVEL[(roleOrStaff || '').toLowerCase()] || 7;
 }
 
 // Filter tabs visible to the current user based on role hierarchy
 function getVisibleTabs(statusFilter) {
+  // In Act As mode — show only the target's tabs
+  if (actingAs) {
+    return tabs.filter(t => {
+      if (statusFilter && !statusFilter.includes(t.status)) return false;
+      return t.createdBy === actingAs.id;
+    });
+  }
+
   const myLevel = getRoleLevel(currentUser);
   const viewAll = hasPermission('tab.view_all');
 

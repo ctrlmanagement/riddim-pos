@@ -28,7 +28,7 @@ function switchReport(type) {
 }
 
 function getClosedTabs() {
-  return tabs.filter(t => t.status === 'closed' || t.status === 'paid');
+  return getVisibleTabs(['closed', 'paid']);
 }
 
 function renderReport(type) {
@@ -464,7 +464,7 @@ async function loadCheckoutReport(staffId) {
         <div class="dsr-row"><span>Comps (${d.comp_count} items)</span><span>-$${d.comp_total.toFixed(2)}</span></div>
         <div class="dsr-row"><span>Voids</span><span>${d.void_count} items</span></div>
         <div class="dsr-row"><span>Tax</span><span>$${d.tax.toFixed(2)}</span></div>
-        <div class="dsr-row"><span>Auto-Grat</span><span>$${d.auto_grat.toFixed(2)}</span></div>
+        <div class="dsr-row"><span>Service Charge</span><span>$${d.auto_grat.toFixed(2)}</span></div>
       </div>
 
       <div class="dsr-section">

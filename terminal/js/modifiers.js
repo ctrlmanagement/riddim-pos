@@ -341,7 +341,8 @@ async function _addToCartWithModifiers(menuItemId, qty, modifiers, upcharge, spi
       modifiers: modifiers,
       invProductId: spiritInvProductId || item.invProductId || null,
       addedAt: new Date(),
-      addedBy: currentUser.id,
+      addedBy: getEffectiveUserId(),
+      actedBy: isActingAs() ? currentUser.id : null,
     };
     tab.lines.push(newLine);
 

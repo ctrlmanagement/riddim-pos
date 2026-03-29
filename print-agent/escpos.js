@@ -121,9 +121,9 @@ async function printReceipt(tab, config = {}) {
   const disc = tab.discountPct ? sub * tab.discountPct : (tab.discountAmt || 0);
   const afterDisc = sub - disc;
   const tax = afterDisc * taxRate;
-  const grat = tab.autoGrat ? afterDisc * tab.autoGrat : 0;
+  const svcCharge = tab.autoGrat ? afterDisc * tab.autoGrat : 0;
   const tip = tab.tipAmount || 0;
-  const total = afterDisc + tax + grat + (tab.autoGrat ? 0 : tip);
+  const total = afterDisc + tax + svcCharge + (tab.autoGrat ? 0 : tip);
 
   const now = tab.closedAt ? new Date(tab.closedAt) : new Date();
   const date = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
@@ -164,8 +164,8 @@ async function printReceipt(tab, config = {}) {
     await row(label, '-$' + disc.toFixed(2));
   }
   await row(`Tax (${(taxRate * 100).toFixed(1)}%)`, '$' + tax.toFixed(2));
-  if (grat > 0) {
-    await row(`Gratuity (${(tab.autoGrat * 100).toFixed(0)}%)`, '$' + grat.toFixed(2));
+  if (svcCharge > 0) {
+    await row(`Service Charge (${(tab.autoGrat * 100).toFixed(0)}%)`, '$' + svcCharge.toFixed(2));
   }
   if (tip > 0 && !tab.autoGrat) {
     await row('Tip', '$' + tip.toFixed(2));

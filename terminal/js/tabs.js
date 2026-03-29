@@ -23,7 +23,7 @@ async function createTab(name, type = 'bar') {
     lines: [],
     status: 'open',
     createdAt: new Date(),
-    createdBy: currentUser.id,
+    createdBy: getEffectiveUserId(),
     station: STATION.code,
   };
   tabs.push(tab);

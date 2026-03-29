@@ -38,7 +38,7 @@ function generate(data) {
   kvRow(doc, h, 'Comps (' + d.comp_count + ' items)', $(-d.comp_total), { isNegative: d.comp_total > 0 });
   kvRow(doc, h, 'Voids', d.void_count + ' items');
   kvRow(doc, h, 'Tax', $(d.tax));
-  kvRow(doc, h, 'Auto-Gratuity', $(d.auto_grat));
+  kvRow(doc, h, 'Service Charge', $(d.auto_grat));
 
   // ── Payments ──
   sectionHeader(doc, h, 'Payment Summary');

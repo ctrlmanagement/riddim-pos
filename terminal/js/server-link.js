@@ -169,8 +169,9 @@ async function serverCreateOrder(tab) {
     tab_name: tab.name,
     table_num: tab.tableNum || null,
     member_id: tab.memberId || null,
-    server_id: currentUser.id,
-    server_name: currentUser.name,
+    server_id: getEffectiveUserId(),
+    server_name: getEffectiveUser().name,
+    acted_by: isActingAs() ? currentUser.id : null,
     station_code: STATION.code,
     customer_count: tab.guestCount || 1,
     booking_id: tab.bookingId || null,
@@ -195,7 +196,7 @@ async function serverAddLines(tab, newLines) {
     seat: l.seat || null,
     modifiers: l.modifiers || [],
     inv_product_id: l.invProductId || null,
-    added_by: currentUser.id,
+    added_by: getEffectiveUserId(),
   }));
   const result = await serverPost(`/api/orders/${tab.serverId}/lines`, { lines });
   // Map server line IDs back to in-memory lines

@@ -64,7 +64,8 @@ async function addToCart(menuItemId) {
       comped: false,
       invProductId: item.invProductId || null,
       addedAt: new Date(),
-      addedBy: currentUser.id,
+      addedBy: getEffectiveUserId(),
+      actedBy: isActingAs() ? currentUser.id : null,
     };
     tab.lines.push(newLine);
 
@@ -320,7 +321,7 @@ function renderCart() {
   }
   totalsHtml += `<div class="cart-total-row"><span>Tax (${taxPct}%)</span><span>$${tax.toFixed(2)}</span></div>`;
   if (gratAmt > 0) {
-    totalsHtml += `<div class="cart-total-row grat"><span>Auto-Grat (${(tab.autoGrat * 100).toFixed(0)}%)</span><span>$${gratAmt.toFixed(2)}</span></div>`;
+    totalsHtml += `<div class="cart-total-row grat"><span>Service Charge (${(tab.autoGrat * 100).toFixed(0)}%)</span><span>$${gratAmt.toFixed(2)}</span></div>`;
   }
   totalsHtml += `<div class="cart-total-row grand"><span>TOTAL</span><span>$${total.toFixed(2)}</span></div>`;
   totalsEl.innerHTML = totalsHtml;
