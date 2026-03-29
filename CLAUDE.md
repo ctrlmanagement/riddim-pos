@@ -1,5 +1,5 @@
 # RIDDIM POS — Claude Code Project Context
-**AG Entertainment | S85 | March 28, 2026**
+**AG Entertainment | S88 | March 28, 2026**
 
 ## What This Project Is
 Custom point-of-sale system for RIDDIM Supper Club (Atlanta, GA). Local-first architecture: on-premise server + Elo EloPOS 22" AIO terminals running Ubuntu 22.04 + Chromium kiosk. Integrates with the existing RIDDIM Supabase backend (51 tables — membership, inventory, P&L, events, bookings, ticketing).
@@ -133,7 +133,8 @@ const BAR_CONFIG = [
 23. **Qty picker via long-press.** Hold menu item 400ms to open qty modal. Single tap still adds 1. Quick-set buttons: 1, 2, 3, 5, 10. (S87)
 24. **PIN lockout.** 5 failed attempts → 60s lockout + audit log. Counter resets on successful login. (S87)
 25. **Venue name from CONFIG.** `CONFIG.venue_name`, `venue_subtitle`, `venue_city` used in receipt + printer. Loaded from `pos_config` table if present, defaults to RIDDIM/SUPPER CLUB/Atlanta, GA. (S87)
-19. **Cash deposit is manual entry.** Close Day accepts `cash_deposit` from terminal/BOH. Server uses manual amount for `daily_payouts` Cash Deposit row. Expected amount shown for reference only. (S86)
+19. **Cash deposit is manual entry.** Close Day accepts `cash_deposit` from terminal/BOH. Server uses manual amount for `daily_payouts` Cash Deposit row. (S86)
+26. **Blind drop.** Close Day (FOH + BOH) does not show sales totals, expected cash, or pre-fill deposit amount. Staff count cash blind. OVER/SHORT calculated server-side after submission for audit log only. (S88)
 
 ## Research Briefs
 Located at `~/ctrl/riddimsupperclub/_briefings/pos-system/`:
@@ -174,3 +175,4 @@ Phase 9.2: Data persistence — COMPLETE (S87) — 86 list DB table, offline ite
 Phase 9.3: Design hardening — COMPLETE (S87) — WCAG contrast fixes, font size bumps, cart widened, tip reorder, color-coded toasts, floor plan enlarged, venue name configurable, search in mgmt panels
 Phase 9.4: Qty picker — COMPLETE (S87) — long-press menu item opens qty modal with quick-set buttons
 Phase 9.5: PIN lockout — COMPLETE (S87) — 5 attempts → 60s lockout + audit log
+Phase 9.6: Blind drop + Close Day fix — COMPLETE (S88) — UUID fix for BOH close, removed sales summary from FOH+BOH, blind cash deposit entry, post-close success state
