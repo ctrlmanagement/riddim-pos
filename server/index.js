@@ -24,11 +24,16 @@ app.use((req, res, next) => {
 });
 
 // ── STATIC FILES ────────────────────────────────────────────
-// Serve terminal UI
-app.use('/terminal', express.static(path.join(__dirname, '..', 'terminal')));
+// Serve terminal UI — no cache on JS/CSS so deploys take effect immediately
+const noCacheStatic = { etag: false, lastModified: false, setHeaders: (res, filePath) => {
+  if (filePath.endsWith('.js') || filePath.endsWith('.css') || filePath.endsWith('.html')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  }
+}};
+app.use('/terminal', express.static(path.join(__dirname, '..', 'terminal'), noCacheStatic));
 app.use('/shared', express.static(path.join(__dirname, '..', 'shared')));
 // Serve KDS UI (when built)
-app.use('/kds', express.static(path.join(__dirname, '..', 'kds')));
+app.use('/kds', express.static(path.join(__dirname, '..', 'kds'), noCacheStatic));
 
 // ── REST ROUTES ─────────────────────────────────────────────
 const ordersRouter = require('./routes/orders');
