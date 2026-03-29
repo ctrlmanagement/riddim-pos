@@ -144,7 +144,7 @@ async function loadSecurityGroups() {
 async function loadModifiers() {
   const [groupRes, modRes] = await Promise.all([
     sb.from('pos_modifier_groups').select('id, name, sort_order').eq('active', true).order('sort_order'),
-    sb.from('pos_modifiers').select('id, group_id, name, sort_order, price').eq('active', true).order('sort_order'),
+    sb.from('pos_modifiers').select('id, group_id, name, sort_order, price, inv_product_id').eq('active', true).order('sort_order'),
   ]);
   if (groupRes.error) { console.error('Modifier groups load error:', groupRes.error); return; }
   if (modRes.error) { console.error('Modifiers load error:', modRes.error); return; }
@@ -152,7 +152,7 @@ async function loadModifiers() {
   const modsByGroup = {};
   (modRes.data || []).forEach(m => {
     (modsByGroup[m.group_id] = modsByGroup[m.group_id] || []).push({
-      id: m.id, name: m.name, sortOrder: m.sort_order, price: parseFloat(m.price) || 0,
+      id: m.id, name: m.name, sortOrder: m.sort_order, price: parseFloat(m.price) || 0, invProductId: m.inv_product_id || null,
     });
   });
 

@@ -16,7 +16,7 @@ let _modSelections = {}; // { groupId: modifierId }
 function openModifierPicker(menuItemId, qty) {
   if (!MODIFIER_GROUPS.length) {
     // No modifiers configured — add straight to cart
-    _addToCartWithModifiers(menuItemId, qty || 1, [], 0);
+    _addToCartWithModifiers(menuItemId, qty || 1, [], 0, null);
     return;
   }
 
@@ -109,6 +109,7 @@ function _calcUpcharge() {
 function confirmModifiers() {
   const modNames = [];
   let upcharge = 0;
+  let spiritInvProductId = null;
 
   // Collect selected modifier names + upcharge in group sort order
   MODIFIER_GROUPS.forEach(g => {
@@ -118,19 +119,21 @@ function confirmModifiers() {
       if (mod) {
         modNames.push(mod.price > 0 ? `${mod.name} (+$${mod.price})` : mod.name);
         if (mod.price > 0) upcharge += mod.price;
+        // Spirit upgrade → swap inv_product_id to upgrade spirit
+        if (mod.invProductId) spiritInvProductId = mod.invProductId;
       }
     }
   });
 
   closeModal('modifierModal');
-  _addToCartWithModifiers(_modPickerItemId, _modPickerQty, modNames, upcharge);
+  _addToCartWithModifiers(_modPickerItemId, _modPickerQty, modNames, upcharge, spiritInvProductId);
 }
 
 function closeModifierPicker() {
   closeModal('modifierModal');
   // SKIP = add without modifiers
   if (_modPickerItemId) {
-    _addToCartWithModifiers(_modPickerItemId, _modPickerQty, [], 0);
+    _addToCartWithModifiers(_modPickerItemId, _modPickerQty, [], 0, null);
   }
   _modPickerItemId = null;
 }
@@ -139,7 +142,7 @@ function closeModifierPicker() {
 // ADD TO CART WITH MODIFIERS
 // ═══════════════════════════════════════════
 
-async function _addToCartWithModifiers(menuItemId, qty, modifiers, upcharge) {
+async function _addToCartWithModifiers(menuItemId, qty, modifiers, upcharge, spiritInvProductId) {
   let tab = getActiveTab();
   if (!tab) {
     if (typeof pendingTableNum !== 'undefined' && pendingTableNum) {
@@ -182,7 +185,7 @@ async function _addToCartWithModifiers(menuItemId, qty, modifiers, upcharge) {
       voided: false,
       comped: false,
       modifiers: modifiers,
-      invProductId: item.invProductId || null,
+      invProductId: spiritInvProductId || item.invProductId || null,
       addedAt: new Date(),
       addedBy: currentUser.id,
     };
