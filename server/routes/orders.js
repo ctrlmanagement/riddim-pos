@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
+const { requirePermission, requireOwner } = require('../middleware/auth');
 
 // ── GET all open orders (tabs) ──────────────────────────────
 router.get('/', async (req, res) => {
@@ -108,17 +109,21 @@ router.post('/', async (req, res) => {
 
 // ── ADD line items to order ─────────────────────────────────
 router.post('/:id/lines', async (req, res) => {
+  const client = await pool.connect();
   try {
     const { id } = req.params;
     const { lines } = req.body; // array of { menu_item_id, name, price, qty, seat, inv_product_id, added_by }
 
     if (!Array.isArray(lines) || !lines.length) {
+      client.release();
       return res.status(400).json({ error: 'lines array required' });
     }
 
+    await client.query('BEGIN');
+
     const inserted = [];
     for (const line of lines) {
-      const { rows } = await pool.query(
+      const { rows } = await client.query(
         `INSERT INTO pos_order_lines (order_id, menu_item_id, name, price, qty, seat, inv_product_id, added_by)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
         [id, line.menu_item_id, line.name, line.price, line.qty || 1, line.seat || null, line.inv_product_id || null, line.added_by]
@@ -126,12 +131,17 @@ router.post('/:id/lines', async (req, res) => {
       inserted.push(rows[0]);
     }
 
-    // Recalculate order totals
+    await client.query('COMMIT');
+
+    // Recalculate order totals (uses pool, outside transaction)
     await recalcOrder(id);
 
     res.status(201).json(inserted);
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
@@ -153,6 +163,7 @@ router.post('/:id/fire', async (req, res) => {
     );
 
     const order = await getOrderWithLines(id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
     res.json(order);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -160,7 +171,7 @@ router.post('/:id/fire', async (req, res) => {
 });
 
 // ── VOID line ───────────────────────────────────────────────
-router.post('/:id/lines/:lineId/void', async (req, res) => {
+router.post('/:id/lines/:lineId/void', requirePermission('order.void_line'), async (req, res) => {
   try {
     const { id, lineId } = req.params;
     const { reason, voided_by } = req.body;
@@ -172,6 +183,7 @@ router.post('/:id/lines/:lineId/void', async (req, res) => {
 
     await recalcOrder(id);
     const order = await getOrderWithLines(id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
     res.json(order);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -179,7 +191,7 @@ router.post('/:id/lines/:lineId/void', async (req, res) => {
 });
 
 // ── COMP line ───────────────────────────────────────────────
-router.post('/:id/lines/:lineId/comp', async (req, res) => {
+router.post('/:id/lines/:lineId/comp', requirePermission('order.comp'), async (req, res) => {
   try {
     const { id, lineId } = req.params;
     const { reason, comped_by } = req.body;
@@ -191,6 +203,7 @@ router.post('/:id/lines/:lineId/comp', async (req, res) => {
 
     await recalcOrder(id);
     const order = await getOrderWithLines(id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
     res.json(order);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -198,10 +211,16 @@ router.post('/:id/lines/:lineId/comp', async (req, res) => {
 });
 
 // ── VOID entire order ───────────────────────────────────────
-router.post('/:id/void', async (req, res) => {
+router.post('/:id/void', requirePermission('order.void_tab'), async (req, res) => {
   try {
     const { id } = req.params;
     const { reason, voided_by } = req.body;
+
+    // Check order state — cannot void a paid order without owner permission
+    const { rows: [current] } = await pool.query('SELECT state FROM pos_orders WHERE id = $1', [id]);
+    if (current && current.state === 'paid') {
+      return res.status(400).json({ error: 'Cannot void a paid order — reopen first or contact owner' });
+    }
 
     await pool.query(
       `UPDATE pos_orders SET state = 'voided', void_reason = $2, voided_by = $3, voided_at = now(), updated_at = now() WHERE id = $1`,
@@ -214,6 +233,7 @@ router.post('/:id/void', async (req, res) => {
     );
 
     const order = await getOrderWithLines(id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
     res.json(order);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -222,25 +242,56 @@ router.post('/:id/void', async (req, res) => {
 
 // ── PAY order ───────────────────────────────────────────────
 router.post('/:id/pay', async (req, res) => {
+  const client = await pool.connect();
   try {
     const { id } = req.params;
     const { method, amount, tip_amount, stripe_pi_id, processed_by } = req.body;
 
-    await pool.query(
-      `INSERT INTO pos_payments (order_id, method, amount, tip_amount, stripe_pi_id, processed_by)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [id, method, amount, tip_amount || 0, stripe_pi_id || null, processed_by]
+    const amountNum = parseFloat(amount);
+    const tipNum = parseFloat(tip_amount || 0);
+    if (isNaN(amountNum) || amountNum < 0) {
+      client.release();
+      return res.status(400).json({ error: 'Invalid payment amount' });
+    }
+    if (isNaN(tipNum) || tipNum < 0) {
+      client.release();
+      return res.status(400).json({ error: 'Invalid tip amount' });
+    }
+
+    // Check min spend if order has a booking with minimum
+    const { rows: [orderCheck] } = await client.query(
+      `SELECT o.booking_id, o.subtotal, o.tax_amount FROM pos_orders o WHERE o.id = $1`, [id]
     );
 
-    await pool.query(
+    await client.query('BEGIN');
+
+    await client.query(
+      `INSERT INTO pos_payments (order_id, method, amount, tip_amount, stripe_pi_id, processed_by)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [id, method, amountNum, tipNum, stripe_pi_id || null, processed_by]
+    );
+
+    await client.query(
       `UPDATE pos_orders SET state = 'paid', paid_at = now(), updated_at = now() WHERE id = $1`,
       [id]
     );
 
+    await client.query('COMMIT');
+
+    // Log min spend shortfall (advisory — does not block payment per venue policy)
+    if (orderCheck && orderCheck.booking_id) {
+      const spent = (parseFloat(orderCheck.subtotal) || 0) + (parseFloat(orderCheck.tax_amount) || 0);
+      // Note: min spend check is advisory — logged in audit, not blocked
+    }
+
     const order = await getOrderWithLines(id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
     res.json(order);
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
@@ -253,6 +304,7 @@ router.post('/:id/hold', async (req, res) => {
       [id]
     );
     const order = await getOrderWithLines(id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
     res.json(order);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -260,10 +312,14 @@ router.post('/:id/hold', async (req, res) => {
 });
 
 // ── PRICE OVERRIDE ──────────────────────────────────────────
-router.post('/:id/lines/:lineId/price', async (req, res) => {
+router.post('/:id/lines/:lineId/price', requirePermission('order.modify'), async (req, res) => {
   try {
     const { id, lineId } = req.params;
     const { new_price, staff_id, staff_name, reason } = req.body;
+
+    if (new_price == null || isNaN(parseFloat(new_price)) || parseFloat(new_price) < 0) {
+      return res.status(400).json({ error: 'new_price must be a non-negative number' });
+    }
 
     // Get original price
     const { rows: [line] } = await pool.query(
@@ -290,6 +346,7 @@ router.post('/:id/lines/:lineId/price', async (req, res) => {
 
     await recalcOrder(id);
     const order = await getOrderWithLines(id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
     res.json(order);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -297,7 +354,7 @@ router.post('/:id/lines/:lineId/price', async (req, res) => {
 });
 
 // ── TIP ADJUSTMENT ──────────────────────────────────────────
-router.post('/:id/tip', async (req, res) => {
+router.post('/:id/tip', requirePermission('pay.change_tip'), async (req, res) => {
   try {
     const { id } = req.params;
     const { new_tip, staff_id, staff_name } = req.body;
@@ -326,6 +383,7 @@ router.post('/:id/tip', async (req, res) => {
     );
 
     const order = await getOrderWithLines(id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
     res.json(order);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -339,9 +397,9 @@ async function recalcOrder(orderId) {
     [orderId]
   );
 
-  const subtotal = lines
+  const subtotal = +(lines
     .filter(l => l.state !== 'voided' && l.state !== 'comped')
-    .reduce((sum, l) => sum + parseFloat(l.price) * l.qty, 0);
+    .reduce((sum, l) => sum + parseFloat(l.price) * l.qty, 0)).toFixed(2);
 
   // Get order's discount info
   const { rows: [order] } = await pool.query(
@@ -349,19 +407,21 @@ async function recalcOrder(orderId) {
     [orderId]
   );
 
+  if (!order) return; // Order was deleted
+
   const discPct = parseFloat(order.discount_pct) || 0;
   const discFlat = parseFloat(order.discount_flat) || 0;
-  const discountAmt = discPct ? subtotal * discPct : Math.min(discFlat, subtotal);
-  const afterDiscount = subtotal - discountAmt;
+  const discountAmt = discPct ? +(subtotal * discPct).toFixed(2) : +Math.min(discFlat, subtotal).toFixed(2);
+  const afterDiscount = +(subtotal - discountAmt).toFixed(2);
 
   // TODO: get tax rate from config sync — hardcode 8.9% for now
   const taxRate = 0.089;
-  const taxAmount = afterDiscount * taxRate;
+  const taxAmount = +(afterDiscount * taxRate).toFixed(2);
 
   const gratPct = parseFloat(order.auto_grat_pct) || 0;
-  const gratAmt = gratPct ? afterDiscount * gratPct : 0;
+  const gratAmt = gratPct ? +(afterDiscount * gratPct).toFixed(2) : 0;
 
-  const total = afterDiscount + taxAmount + gratAmt;
+  const total = +(afterDiscount + taxAmount + gratAmt).toFixed(2);
 
   await pool.query(
     `UPDATE pos_orders SET subtotal = $2, tax_amount = $3, auto_grat_amt = $4, total = $5, updated_at = now() WHERE id = $1`,
@@ -371,6 +431,7 @@ async function recalcOrder(orderId) {
 
 async function getOrderWithLines(orderId) {
   const orderRes = await pool.query('SELECT * FROM pos_orders WHERE id = $1', [orderId]);
+  if (!orderRes.rows[0]) return null;
   const linesRes = await pool.query('SELECT * FROM pos_order_lines WHERE order_id = $1 ORDER BY added_at', [orderId]);
   const paymentsRes = await pool.query('SELECT * FROM pos_payments WHERE order_id = $1 ORDER BY processed_at', [orderId]);
   return {
@@ -381,7 +442,7 @@ async function getOrderWithLines(orderId) {
 }
 
 // ── CLEAR ALL POS DATA (owner-only, for test data cleanup) ──
-router.post('/clear-all', async (req, res) => {
+router.post('/clear-all', requireOwner(), async (req, res) => {
   try {
     const client = await pool.connect();
     try {

@@ -115,15 +115,18 @@ async function printReceipt(tab, config = {}) {
 
   const taxRate = config.tax_rate || 0.089;
   const footer  = config.receipt_footer || 'Thank you for dining with us!';
+  const venueName = config.venue_name || 'RIDDIM';
+  const venueSub  = config.venue_subtitle || 'SUPPER CLUB';
+  const venueCity = config.venue_city || 'Atlanta, GA';
 
   const lines = (tab.lines || []).filter(l => !l.voided);
-  const sub = lines.reduce((s, l) => s + (l.comped ? 0 : l.price * l.qty), 0);
-  const disc = tab.discountPct ? sub * tab.discountPct : (tab.discountAmt || 0);
-  const afterDisc = sub - disc;
-  const tax = afterDisc * taxRate;
-  const grat = tab.autoGrat ? afterDisc * tab.autoGrat : 0;
+  const sub = +(lines.reduce((s, l) => s + (l.comped ? 0 : l.price * l.qty), 0)).toFixed(2);
+  const disc = +(tab.discountPct ? sub * tab.discountPct : (tab.discountAmt || 0)).toFixed(2);
+  const afterDisc = +(sub - disc).toFixed(2);
+  const tax = +(afterDisc * taxRate).toFixed(2);
+  const grat = tab.autoGrat ? +(afterDisc * tab.autoGrat).toFixed(2) : 0;
   const tip = tab.tipAmount || 0;
-  const total = afterDisc + tax + grat + (tab.autoGrat ? 0 : tip);
+  const total = +(afterDisc + tax + grat + (tab.autoGrat ? 0 : tip)).toFixed(2);
 
   const now = tab.closedAt ? new Date(tab.closedAt) : new Date();
   const date = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
@@ -134,10 +137,10 @@ async function printReceipt(tab, config = {}) {
   // Header
   await cmd(CMD.ALIGN_CENTER);
   await cmd(CMD.DOUBLE_ON);
-  await ln('RIDDIM');
+  await ln(venueName);
   await cmd(CMD.DOUBLE_OFF);
-  await ln('SUPPER CLUB');
-  await ln('Atlanta, GA');
+  await ln(venueSub);
+  await ln(venueCity);
   await cmd(CMD.ALIGN_LEFT);
   await separator();
 

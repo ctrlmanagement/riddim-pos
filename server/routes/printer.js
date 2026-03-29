@@ -41,6 +41,7 @@ function proxyToAgent(ip, path, body) {
     const req = http.request(opts, (res) => {
       let buf = '';
       res.on('data', c => buf += c);
+      res.on('error', reject);
       res.on('end', () => {
         try { resolve(JSON.parse(buf)); }
         catch { resolve({ status: 'ok', raw: buf }); }
@@ -115,6 +116,7 @@ router.get('/status', async (req, res) => {
       const r = http.request(opts, (resp) => {
         let buf = '';
         resp.on('data', c => buf += c);
+        resp.on('error', reject);
         resp.on('end', () => { try { resolve(JSON.parse(buf)); } catch { resolve({ connected: false }); } });
       });
       r.on('error', reject);

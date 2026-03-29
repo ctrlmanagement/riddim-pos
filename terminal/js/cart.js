@@ -1,6 +1,11 @@
 /* RIDDIM POS — Cart + Order Lines + Void */
 'use strict';
 
+function escHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 // ═══════════════════════════════════════════
 // CART / ORDER LINES
 // ═══════════════════════════════════════════
@@ -68,7 +73,7 @@ function removeLine(lineId) {
   } else {
     // Already sent — needs void permission
     if (!hasPermission('order.void_line')) {
-      showToast('No permission to void sent items');
+      showToast('No permission to void sent items', 'error');
       return;
     }
     openVoidReasonModal('line', lineId);
@@ -106,7 +111,7 @@ function submitVoidReason() {
     closeModal('voidReasonModal');
     renderCart();
     renderTabs();
-    showToast(line.name + ' voided');
+    showToast(line.name + ' voided', 'warning');
 
     // Persist to local server
     if (typeof serverVoidLine === 'function') serverVoidLine(tab, line, fullReason);
@@ -128,7 +133,7 @@ function submitVoidReason() {
     closeModal('voidReasonModal');
     renderTabs();
     renderCart();
-    showToast(tab.name + ' voided — ' + reason);
+    showToast(tab.name + ' voided — ' + reason, 'warning');
 
     // Persist to local server
     if (typeof serverVoidOrder === 'function') serverVoidOrder(tab, fullReason);
@@ -212,8 +217,8 @@ function renderCart() {
   let cartExtras = '';
   if (tab.bookingId || tab.depositAmount || tab.eventName) {
     cartExtras += '<div style="padding:8px 10px;background:rgba(212,168,67,0.06);border:1px solid rgba(212,168,67,0.15);border-radius:6px;margin-bottom:6px;font-size:12px;">';
-    if (tab.eventName) cartExtras += `<div style="font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:1px;color:#D4A843;margin-bottom:2px;">${tab.eventName}</div>`;
-    if (tab.guestName) cartExtras += `<div style="color:#F5F0E8;">${tab.guestName}${tab.memberName && tab.memberName !== tab.guestName ? ' — ' + tab.memberName : ''}</div>`;
+    if (tab.eventName) cartExtras += `<div style="font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:1px;color:#D4A843;margin-bottom:2px;">${escHtml(tab.eventName)}</div>`;
+    if (tab.guestName) cartExtras += `<div style="color:#F5F0E8;">${escHtml(tab.guestName)}${tab.memberName && tab.memberName !== tab.guestName ? ' — ' + escHtml(tab.memberName) : ''}</div>`;
     if (tab.depositAmount && tab.depositAmount > 0) cartExtras += `<div style="color:#27AE60;font-family:\'Bebas Neue\',sans-serif;letter-spacing:1px;">DEPOSIT: $${tab.depositAmount.toFixed(2)}</div>`;
     cartExtras += '</div>';
   }
@@ -329,9 +334,14 @@ function renderCartLine(l) {
 // FIRE (send to KDS)
 // ═══════════════════════════════════════════
 
+let _firePending = false;
+
 function fireOrder() {
+  if (_firePending) return;
   const tab = getActiveTab();
   if (!tab) return;
+
+  _firePending = true;
 
   tab.lines.forEach(l => {
     if (l.status === 'pending' && !l.voided) {
@@ -351,9 +361,12 @@ function fireOrder() {
   const btn = document.getElementById('btnFire');
   btn.textContent = 'SENT';
   btn.style.background = '#1E8449';
+  btn.disabled = true;
   setTimeout(() => {
     btn.textContent = 'FIRE';
     btn.style.background = '';
+    btn.disabled = false;
+    _firePending = false;
   }, 1200);
 }
 
@@ -383,7 +396,7 @@ function voidTab() {
   if (!tab) return;
 
   if (!hasPermission('order.void_tab')) {
-    showToast('No permission to void tab');
+    showToast('No permission to void tab', 'error');
     return;
   }
 

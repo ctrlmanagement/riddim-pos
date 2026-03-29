@@ -5,14 +5,19 @@
 // VIEW SERVERS — all open tabs by server
 // ═══════════════════════════════════════════
 
+let _serversSearchTerm = '';
+
 function renderMgmtServers() {
   const staffMap = {};
   STAFF.forEach(s => staffMap[s.id] = s.name);
   const myLevel = getRoleLevel(currentUser);
 
+  const search = _serversSearchTerm.toLowerCase();
+
   // Group visible open tabs by creator (role-filtered)
   const serverTabs = {};
   getVisibleTabs(['open', 'sent']).forEach(t => {
+    if (search && !t.name.toLowerCase().includes(search) && !(staffMap[t.createdBy] || '').toLowerCase().includes(search)) return;
     const id = t.createdBy;
     const name = staffMap[id] || 'Unknown';
     if (!serverTabs[id]) serverTabs[id] = { name, tabs: [] };
@@ -22,12 +27,16 @@ function renderMgmtServers() {
   const list = document.getElementById('mgmtServersList');
   const servers = Object.values(serverTabs);
 
+  // Search bar
+  let searchHtml = `<div style="margin-bottom:12px"><input type="text" placeholder="Search tabs or servers..." value="${_serversSearchTerm}"
+    oninput="_serversSearchTerm=this.value;renderMgmtServers()" style="width:100%;height:36px;padding:0 10px;border:1px solid var(--surface);border-radius:var(--radius);background:var(--obsidian-mid);color:var(--ivory);font-size:13px;outline:none;"></div>`;
+
   if (servers.length === 0) {
-    list.innerHTML = '<div class="mgmt-empty">No open tabs</div>';
+    list.innerHTML = searchHtml + '<div class="mgmt-empty">No open tabs</div>';
     return;
   }
 
-  list.innerHTML = servers.map(s => {
+  list.innerHTML = searchHtml + servers.map(s => {
     const totalSales = s.tabs.reduce((sum, t) => sum + tabTotal(t), 0);
     return `
       <div class="server-card">
@@ -194,22 +203,33 @@ function mgmtForceClockOut(staffId) {
 // CLOSED CHECKS — reopen, change tip
 // ═══════════════════════════════════════════
 
+let _checksSearchTerm = '';
+
 function renderMgmtChecks() {
   const closed = getVisibleTabs(['closed', 'paid']);
   const staffMap = {};
   STAFF.forEach(s => staffMap[s.id] = s.name);
 
+  const search = _checksSearchTerm.toLowerCase();
+
   const list = document.getElementById('mgmtChecksList');
 
-  if (closed.length === 0) {
-    list.innerHTML = '<div class="mgmt-empty">No closed checks</div>';
+  const filtered = search
+    ? closed.filter(t => t.name.toLowerCase().includes(search) || (staffMap[t.createdBy] || '').toLowerCase().includes(search) || (t.payMethod || '').toLowerCase().includes(search))
+    : closed;
+
+  const searchHtml = `<div style="margin-bottom:12px"><input type="text" placeholder="Search by name, server, or method..." value="${_checksSearchTerm}"
+    oninput="_checksSearchTerm=this.value;renderMgmtChecks()" style="width:100%;height:36px;padding:0 10px;border:1px solid var(--surface);border-radius:var(--radius);background:var(--obsidian-mid);color:var(--ivory);font-size:13px;outline:none;"></div>`;
+
+  if (filtered.length === 0) {
+    list.innerHTML = searchHtml + '<div class="mgmt-empty">No closed checks</div>';
     return;
   }
 
   // Most recent first
-  const sorted = [...closed].sort((a, b) => new Date(b.closedAt || b.paidAt) - new Date(a.closedAt || a.paidAt));
+  const sorted = [...filtered].sort((a, b) => new Date(b.closedAt || b.paidAt) - new Date(a.closedAt || a.paidAt));
 
-  list.innerHTML = `
+  list.innerHTML = searchHtml + `
     <table class="mgmt-table">
       <thead><tr><th>CHECK</th><th>SERVER</th><th>METHOD</th><th>TOTAL</th><th>TIP</th><th>CLOSED</th><th></th></tr></thead>
       <tbody>

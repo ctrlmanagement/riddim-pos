@@ -56,7 +56,11 @@ function openPayment() {
   if (memberInfo) {
     if (tab.memberId && tab.memberName) {
       const tier = typeof getMemberTier === 'function' ? getMemberTier(tab.memberPoints || 0) : { name: 'Silver' };
-      memberInfo.innerHTML = `<div class="pay-member-info">${tab.memberName} — ${tier.name}</div>`;
+      const memberDiv = document.createElement('div');
+      memberDiv.className = 'pay-member-info';
+      memberDiv.textContent = `${tab.memberName} — ${tier.name}`;
+      memberInfo.innerHTML = '';
+      memberInfo.appendChild(memberDiv);
       memberInfo.style.display = '';
     } else {
       memberInfo.innerHTML = '';
@@ -154,91 +158,125 @@ function updatePayLabel(tab) {
 // SUBMIT PAYMENT — handles deposit split
 // ═══════════════════════════════════════════
 
+let _paymentSubmitting = false;
+
 async function submitPayment() {
+  if (_paymentSubmitting) return;
   const tab = getActiveTab();
   if (!tab) return;
 
-  const tipBase = tabSubtotal(tab) - tabDiscountAmount(tab);
-  tab.tipPct = tab.autoGrat || selectedTip;
-  tab.tipAmount = tab.autoGrat ? tipBase * tab.autoGrat : tipBase * selectedTip;
+  _paymentSubmitting = true;
+  const payBtn = document.querySelector('#paymentModal .pay-submit');
+  if (payBtn) payBtn.disabled = true;
 
-  const totalWithTip = tabTotal(tab) + (tab.autoGrat ? 0 : tab.tipAmount);
-  const deposit = tab.depositAmount || 0;
-  const usedDeposit = Math.min(deposit, totalWithTip);
-  const unusedDeposit = Math.max(0, deposit - totalWithTip);
-  const balanceDue = Math.max(0, totalWithTip - deposit);
+  try {
+    const tipBase = tabSubtotal(tab) - tabDiscountAmount(tab);
+    tab.tipPct = tab.autoGrat || selectedTip;
+    tab.tipAmount = tab.autoGrat ? tipBase * tab.autoGrat : tipBase * selectedTip;
+    if (isNaN(tab.tipAmount)) tab.tipAmount = 0;
 
-  // Store deposit accounting on tab for receipt/reporting
-  tab.depositUsed = usedDeposit;
-  tab.depositUnused = unusedDeposit;
-  tab.balanceDue = balanceDue;
+    const totalWithTip = tabTotal(tab) + (tab.autoGrat ? 0 : tab.tipAmount);
+    const deposit = tab.depositAmount || 0;
+    const usedDeposit = Math.min(deposit, totalWithTip);
+    const unusedDeposit = Math.max(0, deposit - totalWithTip);
+    const balanceDue = Math.max(0, totalWithTip - deposit);
 
-  // Payment method for the balance (or 'deposit' if fully covered)
-  tab.payMethod = balanceDue > 0 ? selectedPayMethod : 'deposit';
+    // Store deposit accounting on tab for receipt/reporting
+    tab.depositUsed = usedDeposit;
+    tab.depositUnused = unusedDeposit;
+    tab.balanceDue = balanceDue;
 
-  tab.status = 'paid';
-  tab.paidAt = new Date();
+    // Payment method for the balance (or 'deposit' if fully covered)
+    tab.payMethod = balanceDue > 0 ? selectedPayMethod : 'deposit';
 
-  // Mark all lines served
-  tab.lines.forEach(l => {
-    if (!l.voided && l.status !== 'voided') {
-      l.status = 'served';
+    tab.paidAt = new Date();
+
+    // Mark all lines served
+    tab.lines.forEach(l => {
+      if (!l.voided && l.status !== 'voided') {
+        l.status = 'served';
+      }
+    });
+
+    tab.status = 'closed';
+    tab.closedAt = new Date();
+
+    // Clear from active
+    activeTabId = null;
+    const openTabs = tabs.filter(t => t.status === 'open' || t.status === 'sent');
+    if (openTabs.length > 0) {
+      activeTabId = openTabs[0].id;
     }
-  });
 
-  tab.status = 'closed';
-  tab.closedAt = new Date();
+    closeModal('paymentModal');
+    renderTabs();
+    renderCart();
 
-  // Clear from active
-  activeTabId = null;
-  const openTabs = tabs.filter(t => t.status === 'open' || t.status === 'sent');
-  if (openTabs.length > 0) {
-    activeTabId = openTabs[0].id;
+    // ── Persist to local server ──
+    let paymentFailed = false;
+
+    // Payment #1: Deposit (if any)
+    if (usedDeposit > 0 && typeof serverPayOrder === 'function') {
+      const depResult = await serverPost(`/api/orders/${tab.serverId}/pay`, {
+        method: 'deposit',
+        amount: usedDeposit,
+        tip_amount: 0,
+        processed_by: currentUser.id,
+      });
+      if (depResult && depResult.error) paymentFailed = true;
+    }
+
+    // Payment #2: Balance (card/cash/comp — if any remaining)
+    // balanceDue includes tip — split it out so amount = sale only, tip_amount = tip only
+    const tipForPayment = tab.tipAmount || 0;
+    const saleAmount = Math.max(0, balanceDue - tipForPayment);
+    if (balanceDue > 0 && typeof serverPayOrder === 'function') {
+      const payResult = await serverPayOrder(tab, selectedPayMethod, saleAmount, tipForPayment);
+      if (payResult && payResult.error) paymentFailed = true;
+      if (!payResult && serverConnected) paymentFailed = true;
+    } else if (tab.serverId) {
+      // $0 balance — deposit covered everything, or fully comped, or empty tab
+      // Always create a payment record so order moves to 'paid' and gets a sale_num
+      const zResult = await serverPost(`/api/orders/${tab.serverId}/pay`, {
+        method: usedDeposit > 0 ? 'deposit' : (selectedPayMethod || 'comp'),
+        amount: 0,
+        tip_amount: tab.tipAmount || 0,
+        processed_by: currentUser.id,
+      });
+      if (zResult && zResult.error) paymentFailed = true;
+    }
+
+    if (paymentFailed) {
+      showToast('WARNING: Payment may not have saved to server — verify before next close', 'error');
+    }
+
+    // ── Record unused deposit as OTHER INCOME audit entry ──
+    if (unusedDeposit > 0 && tab.serverId && typeof serverAuditLog === 'function') {
+      serverAuditLog('deposit_surplus', {
+        order_id: tab.serverId,
+        booking_id: tab.bookingId,
+        deposit_total: deposit,
+        deposit_used: usedDeposit,
+        deposit_unused: unusedDeposit,
+        guest_name: tab.guestName || null,
+      }, 'Unused deposit → OTHER INCOME');
+    }
+
+    // ── RIDDIM INTEGRATION: Close table session + booking ──
+    if (tab.sessionId && typeof closeTableSession === 'function') {
+      closeTableSession(tab);
+    }
+    if (tab.bookingId && typeof closeBooking === 'function') {
+      closeBooking(tab.bookingId, totalWithTip);
+    }
+
+    if (typeof updateFloorPlan === 'function') updateFloorPlan();
+
+    showReceipt(tab);
+  } finally {
+    _paymentSubmitting = false;
+    if (payBtn) payBtn.disabled = false;
   }
-
-  closeModal('paymentModal');
-  renderTabs();
-  renderCart();
-
-  // ── Persist to local server ──
-  // Payment #1: Deposit (if any)
-  if (usedDeposit > 0 && typeof serverPayOrder === 'function') {
-    await serverPost(`/api/orders/${tab.serverId}/pay`, {
-      method: 'deposit',
-      amount: usedDeposit,
-      tip_amount: 0,
-      processed_by: currentUser.id,
-    });
-  }
-
-  // Payment #2: Balance (card/cash/comp — if any remaining)
-  // balanceDue includes tip — split it out so amount = sale only, tip_amount = tip only
-  const tipForPayment = tab.tipAmount || 0;
-  const saleAmount = Math.max(0, balanceDue - tipForPayment);
-  if (balanceDue > 0 && typeof serverPayOrder === 'function') {
-    await serverPayOrder(tab, selectedPayMethod, saleAmount, tipForPayment);
-  } else if (tab.serverId) {
-    // $0 balance — deposit covered everything, or fully comped, or empty tab
-    // Always create a payment record so order moves to 'paid' and gets a sale_num
-    await serverPost(`/api/orders/${tab.serverId}/pay`, {
-      method: usedDeposit > 0 ? 'deposit' : (selectedPayMethod || 'comp'),
-      amount: 0,
-      tip_amount: tab.tipAmount || 0,
-      processed_by: currentUser.id,
-    });
-  }
-
-  // ── RIDDIM INTEGRATION: Close table session + booking ──
-  if (tab.sessionId && typeof closeTableSession === 'function') {
-    closeTableSession(tab);
-  }
-  if (tab.bookingId && typeof closeBooking === 'function') {
-    closeBooking(tab.bookingId, totalWithTip);
-  }
-
-  if (typeof updateFloorPlan === 'function') updateFloorPlan();
-
-  showReceipt(tab);
 }
 
 // ═══════════════════════════════════════════

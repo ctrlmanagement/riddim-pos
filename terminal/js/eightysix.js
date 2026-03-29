@@ -76,3 +76,14 @@ function update86Badge() {
 function isItem86(itemId) {
   return eightySixSet.has(itemId);
 }
+
+// Called by server-link.js when another terminal toggles 86
+function toggle86Remote(itemId, is86) {
+  if (is86) {
+    eightySixSet.add(itemId);
+  } else {
+    eightySixSet.delete(itemId);
+  }
+  update86Badge();
+  if (typeof renderMenu === 'function') renderMenu();
+}

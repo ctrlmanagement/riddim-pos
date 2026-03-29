@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
+const { requirePermission } = require('../middleware/auth');
 
 // Paid out categories → daily_payouts label mapping
 const PAIDOUT_CATEGORIES = [
@@ -96,7 +97,7 @@ router.post('/', async (req, res) => {
 });
 
 // DELETE /api/paid-outs/:id — void a paid out (manager only)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requirePermission('mgmt.close_day'), async (req, res) => {
   try {
     const { rows } = await pool.query(
       `DELETE FROM pos_paid_outs WHERE id = $1 RETURNING *`,

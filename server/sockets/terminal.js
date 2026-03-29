@@ -58,9 +58,31 @@ module.exports = function (io) {
 
     // ── 86 LIST ───────────────────────────────────────────
 
-    // Item 86'd — broadcast to all terminals
-    socket.on('86:toggle', (data) => {
+    // Item 86'd — persist + broadcast to all terminals
+    socket.on('86:toggle', async (data) => {
       socket.broadcast.emit('86:toggle', data);
+      // Persist to DB
+      try {
+        if (data.is86) {
+          await pool.query(
+            `INSERT INTO pos_86_items (menu_item_id) VALUES ($1) ON CONFLICT DO NOTHING`,
+            [data.itemId]
+          );
+        } else {
+          await pool.query(
+            `DELETE FROM pos_86_items WHERE menu_item_id = $1`,
+            [data.itemId]
+          );
+        }
+      } catch (e) { /* table may not exist yet */ }
+    });
+
+    // Send current 86 list to newly connected terminal
+    socket.on('request-86-list', async () => {
+      try {
+        const { rows } = await pool.query('SELECT menu_item_id FROM pos_86_items');
+        socket.emit('86:full-list', rows.map(r => r.menu_item_id));
+      } catch (e) { /* table may not exist yet */ }
     });
 
     // ── CLOCK ─────────────────────────────────────────────

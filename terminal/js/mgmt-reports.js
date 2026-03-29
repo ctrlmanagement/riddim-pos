@@ -599,7 +599,7 @@ function renderReportCustom(el) {
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             ${customPresets.map((p, i) => `
               <button class="po-cat-btn" style="flex:0 0 auto;display:flex;align-items:center;gap:8px" onclick="loadCustomPreset(${i})">
-                ${p.name}
+                ${typeof escHtml === 'function' ? escHtml(p.name) : p.name}
                 <span onclick="event.stopPropagation();deleteCustomPreset(${i})" style="color:var(--red);font-size:11px;cursor:pointer">&times;</span>
               </button>
             `).join('')}
@@ -857,7 +857,13 @@ async function generateCustomReport(format) {
 
     if (preview) preview.innerHTML = html;
   } catch (e) {
-    if (preview) preview.innerHTML = `<div class="mgmt-empty">Failed: ${e.message}</div>`;
+    if (preview) {
+      const errDiv = document.createElement('div');
+      errDiv.className = 'mgmt-empty';
+      errDiv.textContent = 'Failed: ' + e.message;
+      preview.innerHTML = '';
+      preview.appendChild(errDiv);
+    }
   }
 }
 

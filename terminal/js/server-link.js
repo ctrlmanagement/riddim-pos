@@ -39,6 +39,13 @@ async function initServerLink() {
   }
 
   console.log('POS server detected at:', SERVER_URL);
+
+  // Clean up previous socket if reconnecting
+  if (socket) {
+    socket.removeAllListeners();
+    socket.disconnect();
+  }
+
   socket = io(SERVER_URL);
 
   socket.on('connect', () => {
@@ -46,7 +53,11 @@ async function initServerLink() {
     console.log('Connected to POS server:', socket.id);
     // Join station room
     if (STATION.code) socket.emit('join-station', STATION.code);
+    // Request persisted 86 list
+    socket.emit('request-86-list');
     updateConnectionBadge(true);
+    // Flush any offline-queued line additions
+    if (typeof _flushOfflineQueue === 'function') _flushOfflineQueue();
   });
 
   socket.on('disconnect', () => {
@@ -80,6 +91,16 @@ async function initServerLink() {
     // Another terminal toggled 86 — update local state
     if (typeof toggle86Remote === 'function') {
       toggle86Remote(data.itemId, data.is86);
+    }
+  });
+
+  socket.on('86:full-list', (itemIds) => {
+    // Restore persisted 86 list from server
+    if (typeof eightySixSet !== 'undefined' && Array.isArray(itemIds)) {
+      eightySixSet.clear();
+      itemIds.forEach(id => eightySixSet.add(id));
+      if (typeof update86Badge === 'function') update86Badge();
+      if (typeof renderMenu === 'function') renderMenu();
     }
   });
 
@@ -163,7 +184,7 @@ async function serverCreateOrder(tab) {
   return order;
 }
 
-// Mirror line additions to server
+// Mirror line additions to server (with offline queue)
 async function serverAddLines(tab, newLines) {
   if (!tab.serverId) return null;
   const lines = newLines.map(l => ({
@@ -181,8 +202,46 @@ async function serverAddLines(tab, newLines) {
     result.forEach((serverLine, i) => {
       if (newLines[i]) newLines[i].serverLineId = serverLine.id;
     });
+    // Clear any queued lines for this tab
+    _removeFromOfflineQueue(tab.serverId);
+  } else if (!result) {
+    // Server unreachable — queue for retry
+    _addToOfflineQueue(tab.serverId, lines);
   }
   return result;
+}
+
+// Offline queue — persists pending line additions in localStorage
+function _addToOfflineQueue(orderId, lines) {
+  try {
+    const queue = JSON.parse(localStorage.getItem('pos_offline_lines') || '[]');
+    queue.push({ orderId, lines, queuedAt: Date.now() });
+    localStorage.setItem('pos_offline_lines', JSON.stringify(queue));
+  } catch (e) { /* localStorage may be full */ }
+}
+
+function _removeFromOfflineQueue(orderId) {
+  try {
+    const queue = JSON.parse(localStorage.getItem('pos_offline_lines') || '[]');
+    const filtered = queue.filter(q => q.orderId !== orderId);
+    localStorage.setItem('pos_offline_lines', JSON.stringify(filtered));
+  } catch (e) { /* ignore */ }
+}
+
+async function _flushOfflineQueue() {
+  try {
+    const queue = JSON.parse(localStorage.getItem('pos_offline_lines') || '[]');
+    if (!queue.length) return;
+    const remaining = [];
+    for (const item of queue) {
+      const result = await serverPost(`/api/orders/${item.orderId}/lines`, { lines: item.lines });
+      if (!result) remaining.push(item); // still offline
+    }
+    localStorage.setItem('pos_offline_lines', JSON.stringify(remaining));
+    if (remaining.length < queue.length) {
+      console.log(`[offline] Flushed ${queue.length - remaining.length} queued line batches`);
+    }
+  } catch (e) { /* ignore */ }
 }
 
 // Mirror fire to server

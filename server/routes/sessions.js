@@ -112,7 +112,7 @@ router.post('/close', async (req, res) => {
     payoutRows.push({ label: 'DSR:Table Service Fees', amount: parseFloat(sales.service_fees) });
     payoutRows.push({ label: 'DSR:Alternative Fees', amount: 0 });
     payoutRows.push({ label: 'DSR:House Pymts', amount: parseFloat(payments.deposit_applied) });
-    payoutRows.push({ label: 'DSR:Liquor Adj Sales', amount: parseFloat(sales.net_sales) - parseFloat(comps.comp_total) });
+    payoutRows.push({ label: 'DSR:Liquor Adj Sales', amount: +((parseFloat(sales.net_sales) || 0) - (parseFloat(comps.comp_total) || 0)).toFixed(2) });
     payoutRows.push({ label: 'DSR:Valet Parking', amount: 0 });
 
     // Collection fields — CC by station
@@ -125,12 +125,25 @@ router.post('/close', async (req, res) => {
     });
 
     // Cash Deposit — use manually entered amount if provided, otherwise calculate
-    const cashInDrawer = parseFloat(payments.cash_sales) + parseFloat(payments.cash_tips);
-    const calculatedDeposit = cashInDrawer - totalPaidOuts;
+    const cashInDrawer = (parseFloat(payments.cash_sales) || 0) + (parseFloat(payments.cash_tips) || 0);
+    const calculatedDeposit = +(cashInDrawer - totalPaidOuts).toFixed(2);
     const cashDeposit = (manualCashDeposit !== undefined && manualCashDeposit !== null)
       ? parseFloat(manualCashDeposit)
       : calculatedDeposit;
     payoutRows.push({ label: 'Cash Deposit', amount: cashDeposit });
+
+    // Audit trail: log manual cash deposit override
+    if (manualCashDeposit !== undefined && manualCashDeposit !== null) {
+      const overShort = +(parseFloat(manualCashDeposit) - calculatedDeposit).toFixed(2);
+      try {
+        await pool.query(
+          `INSERT INTO pos_audit_log (audit_type, staff_id, staff_name, detail)
+           VALUES ('cash_deposit_override', $1, $2, $3)`,
+          [closed_by, closed_by_name || 'unknown',
+           JSON.stringify({ calculated: calculatedDeposit, entered: parseFloat(manualCashDeposit), over_short: overShort, date: businessDate })]
+        );
+      } catch (e) { console.warn('[day-close] audit log insert failed:', e.message); }
+    }
 
     // Expense rows from paid outs (category → daily_payouts label)
     paidOuts.forEach(po => {
@@ -260,7 +273,7 @@ router.get('/summary', async (req, res) => {
         count: parseInt(p.count),
       })),
       total_paid_outs: totalPaidOuts,
-      cash_deposit: parseFloat(payments.cash_sales) - totalPaidOuts,
+      cash_deposit: +((parseFloat(payments.cash_sales) || 0) - totalPaidOuts).toFixed(2),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

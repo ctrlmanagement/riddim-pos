@@ -25,13 +25,22 @@ function selectCategory(catId) {
 // MENU GRID
 // ═══════════════════════════════════════════
 
+function handleMenuItemClick(el) {
+  if (el.dataset.is86) {
+    showToast("Item is 86'd");
+  } else {
+    addToCart(el.dataset.itemId);
+  }
+}
+
 function renderMenu() {
   const grid = document.getElementById('menuGrid');
   const items = MENU_ITEMS.filter(i => i.cat === activeCategory);
   grid.innerHTML = items.map(item => {
     const is86 = typeof isItem86 === 'function' && isItem86(item.id);
     return `<div class="menu-item ${item.speedRail ? 'speed-rail' : ''} ${is86 ? 'eighty-sixed' : ''}"
-          onclick="${is86 ? 'showToast(\'Item is 86\\\'d\')' : 'addToCart(\'' + item.id + '\')'}">
+          data-item-id="${item.id}" data-is86="${is86 ? '1' : ''}"
+          onclick="handleMenuItemClick(this)">
       <span class="menu-item-name">${item.name}</span>
       <span class="menu-item-price">${is86 ? '86' : '$' + item.price}</span>
     </div>`;

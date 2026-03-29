@@ -47,10 +47,15 @@ router.post('/out', async (req, res) => {
   try {
     const { staff_id, forced_by, declared_tips } = req.body;
 
+    const tipsNum = parseFloat(declared_tips || 0);
+    if (isNaN(tipsNum) || tipsNum < 0) {
+      return res.status(400).json({ error: 'declared_tips must be non-negative' });
+    }
+
     const { rows } = await pool.query(
       `UPDATE pos_clock_entries SET clock_out = now(), forced_out_by = $2, declared_tips = $3
        WHERE staff_id = $1 AND clock_out IS NULL RETURNING *`,
-      [staff_id, forced_by || null, declared_tips || 0]
+      [staff_id, forced_by || null, tipsNum]
     );
 
     if (!rows.length) return res.status(404).json({ error: 'No active clock entry' });

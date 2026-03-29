@@ -17,7 +17,7 @@ app.use(express.json());
 // CORS — allow BOH portal (GitHub Pages) and local dev to query the API
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, x-staff-id');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
@@ -93,10 +93,12 @@ server.listen(PORT, '0.0.0.0', async () => {
   console.log(`  Terminal: http://localhost:${PORT}/terminal/`);
   console.log(`  KDS:      http://localhost:${PORT}/kds/`);
 
-  // Auto-migrate: add declared_tips column if missing
+  // Auto-migrate
   try {
     await pool.query(`ALTER TABLE pos_clock_entries ADD COLUMN IF NOT EXISTS declared_tips numeric(10,2) DEFAULT 0`);
-  } catch (e) { /* column may already exist */ }
+    await pool.query(`CREATE TABLE IF NOT EXISTS pos_86_items (menu_item_id uuid PRIMARY KEY, created_at timestamptz DEFAULT now())`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS pos_pin_lockouts (staff_pin text PRIMARY KEY, attempts int DEFAULT 0, locked_until timestamptz)`);
+  } catch (e) { /* tables may already exist */ }
   console.log(`  API:      http://localhost:${PORT}/api/health`);
   console.log(`  Sync:     http://localhost:${PORT}/api/sync/status`);
   sync.start();

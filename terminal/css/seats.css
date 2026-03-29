@@ -14,7 +14,7 @@
 
 .seat-bar-label {
   font-family: var(--font-label);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ash);
   letter-spacing: 2px;
   margin-right: 6px;
@@ -37,10 +37,10 @@
 .seat-btn.active { background: var(--gold-dim); color: var(--obsidian); border-color: var(--gold); }
 
 .seat-badge {
-  font-size: 9px;
+  font-size: 11px;
   background: var(--blue);
   color: white;
-  padding: 1px 4px;
+  padding: 2px 5px;
   border-radius: 3px;
   margin-left: 4px;
 }
@@ -59,7 +59,7 @@
 
 .min-spend-label {
   font-family: var(--font-label);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ash);
   letter-spacing: 1px;
   white-space: nowrap;
@@ -104,7 +104,7 @@
 
 .btl-guest-label {
   font-family: var(--font-label);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ash);
   letter-spacing: 1px;
 }

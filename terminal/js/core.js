@@ -20,6 +20,10 @@ let CONFIG = {
   require_manager_comp: true,
   require_manager_discount: true,
   max_discount_pct: 0.50,
+  venue_name: 'RIDDIM',
+  venue_subtitle: 'SUPPER CLUB',
+  venue_city: 'Atlanta, GA',
+  receipt_footer: 'Thank you for dining with us!',
 };
 
 let STATION = { id: null, code: 'BAR1', label: 'Bar 1', pos: 'POS 1' };
@@ -43,6 +47,10 @@ async function loadConfig() {
     CONFIG.require_manager_comp = data.require_manager_comp;
     CONFIG.require_manager_discount = data.require_manager_discount;
     CONFIG.max_discount_pct = parseFloat(data.max_discount_pct) || 0.50;
+    if (data.venue_name) CONFIG.venue_name = data.venue_name;
+    if (data.venue_subtitle) CONFIG.venue_subtitle = data.venue_subtitle;
+    if (data.venue_city) CONFIG.venue_city = data.venue_city;
+    if (data.receipt_footer) CONFIG.receipt_footer = data.receipt_footer;
   }
   if (error) console.error('Config load error:', error);
 }
@@ -237,14 +245,22 @@ function showScreen(id) {
 // TOAST NOTIFICATIONS
 // ═══════════════════════════════════════════
 
-function showToast(msg) {
+function showToast(msg, type) {
   let toast = document.getElementById('toast');
   if (!toast) {
     toast = document.createElement('div');
     toast.id = 'toast';
-    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#D4A843;color:#0A0A0A;padding:12px 24px;border-radius:8px;font-family:"Bebas Neue",sans-serif;font-size:16px;letter-spacing:1px;z-index:9999;opacity:0;transition:opacity 0.3s;';
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:8px;font-family:"Bebas Neue",sans-serif;font-size:16px;letter-spacing:1px;z-index:9999;opacity:0;transition:opacity 0.3s;';
     document.body.appendChild(toast);
   }
+  const colors = {
+    error:   { bg: '#E74C3C', fg: '#FFFFFF' },
+    success: { bg: '#27AE60', fg: '#FFFFFF' },
+    warning: { bg: '#F39C12', fg: '#0A0A0A' },
+  };
+  const c = colors[type] || { bg: '#D4A843', fg: '#0A0A0A' };
+  toast.style.background = c.bg;
+  toast.style.color = c.fg;
   toast.textContent = msg;
   toast.style.opacity = '1';
   setTimeout(() => { toast.style.opacity = '0'; }, 2500);

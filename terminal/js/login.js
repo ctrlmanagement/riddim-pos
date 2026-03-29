@@ -6,6 +6,10 @@
 // ═══════════════════════════════════════════
 
 let pinBuffer = '';
+let failedAttempts = 0;
+let lockoutUntil = 0;
+const MAX_PIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION = 60_000; // 1 minute
 
 function initLogin() {
   pinBuffer = '';
@@ -55,8 +59,18 @@ function updatePinDots() {
 }
 
 async function attemptLogin() {
+  // PIN lockout check
+  if (Date.now() < lockoutUntil) {
+    const secs = Math.ceil((lockoutUntil - Date.now()) / 1000);
+    document.getElementById('loginError').textContent = `Too many attempts — locked for ${secs}s`;
+    pinBuffer = '';
+    updatePinDots();
+    return;
+  }
+
   const user = STAFF.find(s => s.pin === pinBuffer);
   if (user) {
+    failedAttempts = 0;
     // Load permissions from security group
     if (user.securityGroupId) {
       user.permissions = await loadPermissions(user.securityGroupId);
@@ -68,9 +82,18 @@ async function attemptLogin() {
     if (typeof stopScreensaverTimer === 'function') stopScreensaverTimer();
     enterTerminal();
   } else {
-    document.getElementById('loginError').textContent = STAFF.length === 0
-      ? 'No staff configured — add POS PINs in Owner portal'
-      : 'Invalid PIN';
+    failedAttempts++;
+    if (failedAttempts >= MAX_PIN_ATTEMPTS) {
+      lockoutUntil = Date.now() + LOCKOUT_DURATION;
+      document.getElementById('loginError').textContent = `Too many attempts — locked for 60s`;
+      if (typeof serverAuditLog === 'function') {
+        serverAuditLog('pin_lockout', { attempts: failedAttempts, station: STATION.code });
+      }
+    } else {
+      document.getElementById('loginError').textContent = STAFF.length === 0
+        ? 'No staff configured — add POS PINs in Owner portal'
+        : `Invalid PIN (${MAX_PIN_ATTEMPTS - failedAttempts} attempts left)`;
+    }
     pinBuffer = '';
     updatePinDots();
   }

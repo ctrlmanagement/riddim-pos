@@ -371,11 +371,12 @@ function renderActiveTablesList(tableTabs) {
 
   list.innerHTML = activeTables.map(t => {
     const minBadge = t.minSpend > 0 ? `<span class="min-badge ${t.total >= t.minSpend ? 'met' : ''}">$${t.total.toFixed(0)}/$${t.minSpend.toFixed(0)}</span>` : '';
-    const memberBadge = t.memberName ? `<span class="member-badge">${t.memberName}</span>` : '';
+    const esc = typeof escHtml === 'function' ? escHtml : (s => s || '');
+    const memberBadge = t.memberName ? `<span class="member-badge">${esc(t.memberName)}</span>` : '';
     return `<div class="tables-active-row" onclick="tableClick(${t.num})">
       <div>
-        <div class="tables-active-name">Table ${t.num}${t.name && !t.name.startsWith('Table') ? ' — ' + t.name : ''} ${memberBadge}</div>
-        <div class="tables-active-meta">${t.meta} ${minBadge}</div>
+        <div class="tables-active-name">Table ${t.num}${t.name && !t.name.startsWith('Table') ? ' — ' + esc(t.name) : ''} ${memberBadge}</div>
+        <div class="tables-active-meta">${esc(t.meta)} ${minBadge}</div>
       </div>
       ${t.total > 0 ? `<div class="tables-active-total">$${t.total.toFixed(0)}</div>` : ''}
     </div>`;
@@ -404,12 +405,13 @@ function renderReservationsList() {
     const minSpend = r.minimum_spend_required ? '$' + parseFloat(r.minimum_spend_required).toFixed(0) + ' min' : '';
     const deposit = r.deposit_paid && r.deposit_amount ? '$' + parseFloat(r.deposit_amount).toFixed(0) + ' deposit' : '';
     const source = r.booking_source === 'member' ? 'MEMBER' : '';
+    const esc = typeof escHtml === 'function' ? escHtml : (s => s || '');
     return `<div class="reservation-row" onclick="seatFromReservation(${r.table_number})">
       <div class="reservation-info">
-        <div class="reservation-name">T${r.table_number} — ${r.guest_name}</div>
+        <div class="reservation-name">T${r.table_number} — ${esc(r.guest_name)}</div>
         <div class="reservation-meta">
-          ${r.party_size} guests${r.section_name ? ' — ' + r.section_name : ''}
-          ${eventName ? ' — ' + eventName : ''}
+          ${r.party_size} guests${r.section_name ? ' — ' + esc(r.section_name) : ''}
+          ${eventName ? ' — ' + esc(eventName) : ''}
         </div>
         <div class="reservation-tags">
           ${minSpend ? `<span class="res-tag">${minSpend}</span>` : ''}
@@ -644,10 +646,11 @@ function openRecallTabs() {
     const total = tabTotal(t);
     const items = t.lines.filter(l => !l.voided).length;
     const timeAgo = getTimeAgo(t.createdAt);
-    const memberBadge = t.memberName ? `<span class="member-badge">${t.memberName}</span>` : '';
+    const esc = typeof escHtml === 'function' ? escHtml : (s => s || '');
+    const memberBadge = t.memberName ? `<span class="member-badge">${esc(t.memberName)}</span>` : '';
     return `<div class="recall-tab-row" onclick="recallTab('${t.id}')">
       <div class="recall-tab-info">
-        <div class="recall-tab-name">${t.name} ${memberBadge}</div>
+        <div class="recall-tab-name">${esc(t.name)} ${memberBadge}</div>
         <div class="recall-tab-meta">${items} items — ${t.type} — ${timeAgo}</div>
       </div>
       <div class="recall-tab-total">${total > 0 ? '$' + total.toFixed(2) : ''}</div>

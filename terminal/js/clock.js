@@ -41,7 +41,7 @@ function updateClockPinDots() {
 
 let pendingClockOutStaff = null; // staff waiting for checkout before clock out
 
-function clockPinSubmit() {
+async function clockPinSubmit() {
   const staff = STAFF.find(s => s.pin === clockPinBuffer);
   if (!staff) {
     document.getElementById('clockStatus').textContent = 'Invalid PIN';
@@ -86,11 +86,23 @@ function clockPinSubmit() {
     return;
   }
 
-  // Clock IN — record immediately
-  clockEntries.push({ staffId: staff.id, staffName: staff.name, type: 'in', time: now });
+  // Clock IN — persist to server first, then update local state
+  if (typeof serverClockIn === 'function') {
+    const result = await serverClockIn(staff.id, staff.name);
+    if (result && result.error) {
+      document.getElementById('clockStatus').textContent = result.error;
+      document.getElementById('clockStatus').style.color = 'var(--red)';
+      clockPinBuffer = '';
+      updateClockPinDots();
+      setTimeout(() => {
+        document.getElementById('clockStatus').style.color = '';
+        document.getElementById('clockStatus').textContent = 'Enter your 4-digit PIN';
+      }, 2000);
+      return;
+    }
+  }
 
-  // Persist to local server
-  if (typeof serverClockIn === 'function') serverClockIn(staff.id, staff.name);
+  clockEntries.push({ staffId: staff.id, staffName: staff.name, type: 'in', time: now });
 
   const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   document.getElementById('clockResult').innerHTML = `

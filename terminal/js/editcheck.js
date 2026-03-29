@@ -48,7 +48,7 @@ function ecSaveTabName() {
 // Comp Item
 function ecComp() {
   if (!hasPermission('order.comp')) {
-    showToast('No permission to comp items');
+    showToast('No permission to comp items', 'error');
     return;
   }
   const tab = getActiveTab();
@@ -132,7 +132,7 @@ function ecDoComp() {
 // Discount
 function ecDiscount() {
   if (!hasPermission('order.discount')) {
-    showToast('No permission to apply discount');
+    showToast('No permission to apply discount', 'error');
     return;
   }
   const tab = getActiveTab();
@@ -279,7 +279,7 @@ function ecRemoveGrat() {
 
 function ecPriceOverride() {
   if (!hasPermission('order.modify')) {
-    showToast('No permission to modify prices');
+    showToast('No permission to modify prices', 'error');
     return;
   }
   const tab = getActiveTab();

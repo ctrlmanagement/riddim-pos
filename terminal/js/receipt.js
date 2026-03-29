@@ -36,9 +36,9 @@ function showReceipt(tab) {
   let html = '';
 
   // Header
-  html += '<div class="rcpt-center rcpt-brand">RIDDIM</div>';
-  html += '<div class="rcpt-center rcpt-sm">SUPPER CLUB</div>';
-  html += '<div class="rcpt-center rcpt-sm">Atlanta, GA</div>';
+  html += `<div class="rcpt-center rcpt-brand">${CONFIG.venue_name}</div>`;
+  html += `<div class="rcpt-center rcpt-sm">${CONFIG.venue_subtitle}</div>`;
+  html += `<div class="rcpt-center rcpt-sm">${CONFIG.venue_city}</div>`;
   html += '<hr class="rcpt-divider">';
 
   // Order / Sale IDs
@@ -149,7 +149,13 @@ async function printReceipt() {
 
     await serverPost('/api/printer/receipt', {
       tab: printTab,
-      config: { tax_rate: CONFIG.tax_rate, receipt_footer: CONFIG.receipt_footer },
+      config: {
+        tax_rate: CONFIG.tax_rate,
+        receipt_footer: CONFIG.receipt_footer,
+        venue_name: CONFIG.venue_name,
+        venue_subtitle: CONFIG.venue_subtitle,
+        venue_city: CONFIG.venue_city,
+      },
     });
 
     showToast('Receipt printed');
