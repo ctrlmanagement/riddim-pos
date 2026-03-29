@@ -16,10 +16,12 @@ function renderCategories() {
 }
 
 let _menuSearchTerm = '';
+let _subcatActiveTab = null;
 
 function selectCategory(catId) {
   activeCategory = catId;
   _menuSearchTerm = '';
+  _subcatActiveTab = null;
   const searchInput = document.getElementById('menuSearchInput');
   if (searchInput) searchInput.value = '';
   renderCategories();
@@ -125,6 +127,12 @@ function renderMenu() {
     return;
   }
 
+  // Subcategory tab view — categories with many subcategories get the tab strip layout
+  if (!_menuSearchTerm && _shouldUseSubcatTabs(activeCategory)) {
+    _renderSubcatTabView(activeCategory);
+    return;
+  }
+
   let items;
   if (_menuSearchTerm) {
     // Search across ALL categories
@@ -173,6 +181,59 @@ function _renderMenuItem(item) {
     <span class="menu-item-price">${is86 ? '86' : '$' + item.price}</span>
   </div>`;
 }
+
+// ═══════════════════════════════════════════
+// SUBCATEGORY TAB VIEW (BTL SERVICE style)
+// ═══════════════════════════════════════════
+
+function _shouldUseSubcatTabs(catId) {
+  const items = MENU_ITEMS.filter(i => i.cat === catId && i.subcategory);
+  if (items.length < 4) return false;
+  // Need at least 2 distinct subcategories
+  const subs = new Set(items.map(i => i.subcategory));
+  return subs.size >= 2;
+}
+
+function _renderSubcatTabView(catId) {
+  const grid = document.getElementById('menuGrid');
+  const items = MENU_ITEMS.filter(i => i.cat === catId);
+
+  // Collect subcategories in sort order
+  const subs = [];
+  const seen = new Set();
+  items.forEach(i => {
+    const sub = i.subcategory || 'OTHER';
+    if (!seen.has(sub)) {
+      seen.add(sub);
+      subs.push(sub);
+    }
+  });
+
+  // Default to first subcategory
+  if (!_subcatActiveTab || !seen.has(_subcatActiveTab)) {
+    _subcatActiveTab = subs[0];
+  }
+
+  // Tab strip
+  const tabs = subs.map(s =>
+    `<button class="su-cat-btn ${s === _subcatActiveTab ? 'active' : ''}"
+            onclick="_subcatSelect('${s.replace(/'/g, "\\'")}')">
+      ${s}
+    </button>`
+  ).join('');
+
+  // Filtered items
+  const filtered = items.filter(i => (i.subcategory || 'OTHER') === _subcatActiveTab);
+  const itemsHtml = filtered.map(item => _renderMenuItem(item)).join('');
+
+  grid.innerHTML = `<div class="su-cat-strip">${tabs}</div>` + itemsHtml;
+}
+
+function _subcatSelect(sub) {
+  _subcatActiveTab = sub;
+  _renderSubcatTabView(activeCategory);
+}
+
 
 // ═══════════════════════════════════════════
 // RECIPE VIEWER
