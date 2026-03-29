@@ -271,10 +271,10 @@ function confirmModifiers() {
     }
   });
 
-  // Spirit upgrade
+  // Spirit upgrade — name only, price is rolled into line total
   if (_spiritUpgradeSelection) {
     const s = _spiritUpgradeSelection;
-    modNames.push(s.upcharge > 0 ? `${s.name} (+$${s.upcharge})` : s.name);
+    modNames.push(s.name);
     upcharge += s.upcharge;
     spiritInvProductId = s.invProductId;
   }
