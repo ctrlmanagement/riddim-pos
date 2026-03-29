@@ -415,6 +415,36 @@
 </div>
 
 <!-- ════════════════════════════════════════
+     QTY PICKER MODAL (long-press on menu item)
+     ════════════════════════════════════════ -->
+<div id="qtyPickerModal" class="modal-overlay">
+  <div class="modal" style="width:320px">
+    <div class="modal-header">
+      <div class="modal-title">QUANTITY</div>
+      <button class="modal-close" onclick="closeModal('qtyPickerModal')">X</button>
+    </div>
+    <div class="modal-body" style="text-align:center">
+      <input type="hidden" id="qtyPickerItemId">
+      <div id="qtyPickerName" style="font-size:16px;font-weight:600;color:var(--ivory);margin-bottom:2px"></div>
+      <div id="qtyPickerPrice" style="font-size:14px;color:var(--gold);margin-bottom:16px"></div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px">
+        <button class="cart-btn hold" style="width:56px;height:56px;font-size:28px;border-radius:50%" onclick="qtyPickerAdjust(-1)">&minus;</button>
+        <div id="qtyPickerValue" style="font-family:var(--font-label);font-size:48px;color:var(--ivory);min-width:56px">1</div>
+        <button class="cart-btn hold" style="width:56px;height:56px;font-size:28px;border-radius:50%" onclick="qtyPickerAdjust(1)">+</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:16px">
+        <button class="quick-tab-btn" style="height:40px;font-size:18px" onclick="qtyPickerSet(1)">1</button>
+        <button class="quick-tab-btn" style="height:40px;font-size:18px" onclick="qtyPickerSet(2)">2</button>
+        <button class="quick-tab-btn" style="height:40px;font-size:18px" onclick="qtyPickerSet(3)">3</button>
+        <button class="quick-tab-btn" style="height:40px;font-size:18px" onclick="qtyPickerSet(5)">5</button>
+        <button class="quick-tab-btn" style="height:40px;font-size:18px" onclick="qtyPickerSet(10)">10</button>
+      </div>
+      <button class="pay-submit" onclick="qtyPickerConfirm()">ADD</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
      NEW TAB MODAL
      ════════════════════════════════════════ -->
 <div id="newTabModal" class="modal-overlay">
