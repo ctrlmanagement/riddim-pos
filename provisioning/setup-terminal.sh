@@ -155,6 +155,7 @@ exec chromium-browser \\
   --touch-events=enabled \\
   --overscroll-history-navigation=0 \\
   --disable-pinch \\
+  --enable-features=VirtualKeyboard \\
   --window-position=0,0 \\
   "$POS_SERVER_URL"
 KIOSK
