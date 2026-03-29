@@ -50,6 +50,69 @@ function _spiritCategoryOptions(selectedId) {
 }
 
 // ═══════════════════════════════════════════
+// RECIPE EDITOR
+// ═══════════════════════════════════════════
+
+function toggleRecipeEditor() {
+  const section = document.getElementById('recipeEditorSection');
+  const btn = document.getElementById('recipeToggleBtn');
+  if (section.style.display === 'none') {
+    section.style.display = '';
+    btn.textContent = 'HIDE RECIPE';
+    btn.style.borderColor = 'var(--gold)';
+    btn.style.color = 'var(--gold)';
+  } else {
+    section.style.display = 'none';
+    btn.textContent = 'RECIPE';
+    btn.style.borderColor = 'var(--ash)';
+    btn.style.color = 'var(--ash)';
+  }
+}
+
+function _populateRecipeFields(recipe) {
+  const section = document.getElementById('recipeEditorSection');
+  const btn = document.getElementById('recipeToggleBtn');
+  document.getElementById('editItemSpecs').value = '';
+  document.getElementById('editItemMethod').value = '';
+  document.getElementById('editItemGlassware').value = '';
+  document.getElementById('editItemGarnish').value = '';
+
+  if (recipe && (recipe.specs || recipe.method || recipe.glassware || recipe.garnish)) {
+    document.getElementById('editItemSpecs').value = (recipe.specs || []).join('\n');
+    document.getElementById('editItemMethod').value = recipe.method || '';
+    document.getElementById('editItemGlassware').value = recipe.glassware || '';
+    document.getElementById('editItemGarnish').value = recipe.garnish || '';
+    // Auto-expand if recipe has data
+    section.style.display = '';
+    btn.textContent = 'HIDE RECIPE';
+    btn.style.borderColor = 'var(--gold)';
+    btn.style.color = 'var(--gold)';
+  } else {
+    section.style.display = 'none';
+    btn.textContent = 'RECIPE';
+    btn.style.borderColor = 'var(--ash)';
+    btn.style.color = 'var(--ash)';
+  }
+}
+
+function _buildRecipeJson() {
+  const specsRaw = document.getElementById('editItemSpecs').value.trim();
+  const method = document.getElementById('editItemMethod').value.trim();
+  const glassware = document.getElementById('editItemGlassware').value.trim();
+  const garnish = document.getElementById('editItemGarnish').value.trim();
+
+  if (!specsRaw && !method && !glassware && !garnish) return null;
+
+  const specs = specsRaw ? specsRaw.split('\n').map(s => s.trim()).filter(Boolean) : [];
+  const recipe = {};
+  if (specs.length) recipe.specs = specs;
+  if (method) recipe.method = method;
+  if (glassware) recipe.glassware = glassware;
+  if (garnish) recipe.garnish = garnish;
+  return recipe;
+}
+
+// ═══════════════════════════════════════════
 // MENU ITEMS MANAGEMENT
 // ═══════════════════════════════════════════
 
@@ -128,6 +191,9 @@ async function openAddItemModal() {
   // Populate base spirit category dropdown
   document.getElementById('editItemBaseSpiritCat').innerHTML = _spiritCategoryOptions('');
 
+  // Clear recipe fields
+  _populateRecipeFields(null);
+
   openModal('editItemModal');
 }
 
@@ -156,6 +222,9 @@ async function openEditItemModal(itemId) {
   // Populate base spirit category dropdown with current selection
   document.getElementById('editItemBaseSpiritCat').innerHTML = _spiritCategoryOptions(item.baseSpiritCategoryId || '');
 
+  // Populate recipe fields
+  _populateRecipeFields(item.recipe);
+
   openModal('editItemModal');
 }
 
@@ -169,6 +238,7 @@ async function saveMenuItem() {
   const invProductId = document.getElementById('editItemInvProduct').value || null;
   const subcategory = document.getElementById('editItemSubcategory').value.trim() || null;
   const baseSpiritCategoryId = document.getElementById('editItemBaseSpiritCat').value || null;
+  const recipe = _buildRecipeJson();
 
   if (!name || isNaN(price) || price < 0) {
     showToast('Name and valid price required');
@@ -184,6 +254,7 @@ async function saveMenuItem() {
     inv_product_id: invProductId,
     subcategory: subcategory,
     base_spirit_category_id: baseSpiritCategoryId,
+    recipe: recipe,
     updated_at: new Date().toISOString(),
   };
 

@@ -56,6 +56,7 @@ function switchMgmt(section) {
   if (section === 'settings') renderMgmtSettings();
   if (section === 'dayclose') renderMgmtDayClose();
   if (section === 'staff-manage') renderMgmtStaffManage();
+  if (section === 'products') renderMgmtProducts();
 }
 
 // Show management nav based on permissions

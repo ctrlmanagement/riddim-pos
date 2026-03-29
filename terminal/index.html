@@ -266,6 +266,7 @@
       <button class="mgmt-nav-btn" data-mgmt="settings" onclick="switchMgmt('settings')">POS SETTINGS</button>
       <button class="mgmt-nav-btn" data-mgmt="dayclose" onclick="switchMgmt('dayclose')">CLOSE DAY</button>
       <button class="mgmt-nav-btn" data-mgmt="staff-manage" onclick="switchMgmt('staff-manage')">MANAGE STAFF</button>
+      <button class="mgmt-nav-btn" data-mgmt="products" onclick="switchMgmt('products')">PRODUCTS</button>
     </div>
     <div class="mgmt-content">
 
@@ -374,6 +375,20 @@
           <h2 class="mgmt-title">MANAGE STAFF</h2>
         </div>
         <div id="mgmtStaffManageList" class="mgmt-form"></div>
+      </div>
+
+      <!-- PRODUCTS (inv_products — bottle prices, costs, PAR) -->
+      <div id="mgmt-products" class="mgmt-section">
+        <div class="mgmt-header">
+          <h2 class="mgmt-title">PRODUCTS</h2>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <select id="mgmtProductFilter" class="form-input" style="max-width:180px" onchange="renderMgmtProducts()">
+            <option value="all">All Categories</option>
+          </select>
+          <input type="text" id="mgmtProductSearch" class="form-input" placeholder="Search products..." style="flex:1" oninput="renderMgmtProducts()">
+        </div>
+        <div id="mgmtProductList" class="mgmt-form" style="overflow-y:auto;max-height:calc(100vh - 180px)"></div>
       </div>
 
     </div>
@@ -521,6 +536,30 @@
       <div class="form-row">
         <label class="form-label">SORT ORDER</label>
         <input type="number" id="editItemSort" class="form-input" min="0" value="0">
+      </div>
+      <!-- Recipe section (collapsible) -->
+      <div style="border-top:1px solid var(--surface-active);margin:12px 0 8px;padding-top:8px">
+        <button type="button" id="recipeToggleBtn" onclick="toggleRecipeEditor()" style="background:none;border:1px dashed var(--ash);color:var(--ash);padding:6px 14px;border-radius:6px;font-family:var(--font-label);font-size:12px;letter-spacing:1px;cursor:pointer;width:100%">RECIPE</button>
+      </div>
+      <div id="recipeEditorSection" style="display:none">
+        <div class="form-row">
+          <label class="form-label">BUILD (one per line)</label>
+          <textarea id="editItemSpecs" class="form-input" rows="5" placeholder="2 oz Hennessy VSOP&#10;0.75 oz fresh lemon&#10;0.5 oz simple syrup" style="resize:vertical;font-family:var(--font-body);font-size:13px"></textarea>
+        </div>
+        <div class="form-row">
+          <label class="form-label">METHOD</label>
+          <textarea id="editItemMethod" class="form-input" rows="2" placeholder="Shake with ice. Strain into coupe." style="resize:vertical;font-family:var(--font-body);font-size:13px"></textarea>
+        </div>
+        <div style="display:flex;gap:8px">
+          <div class="form-row" style="flex:1">
+            <label class="form-label">GLASSWARE</label>
+            <input type="text" id="editItemGlassware" class="form-input" placeholder="Coupe">
+          </div>
+          <div class="form-row" style="flex:1">
+            <label class="form-label">GARNISH</label>
+            <input type="text" id="editItemGarnish" class="form-input" placeholder="Orange peel">
+          </div>
+        </div>
       </div>
       <div class="form-actions">
         <button class="mgmt-action-btn danger" id="editItemDeleteBtn" onclick="deleteMenuItem()" style="display:none">DELETE</button>
@@ -808,6 +847,45 @@
 </div>
 
 <!-- ════════════════════════════════════════
+     EDIT PRODUCT MODAL (inv_products)
+     ════════════════════════════════════════ -->
+<div id="editProductModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="editProductTitle">EDIT PRODUCT</div>
+      <button class="modal-close" onclick="closeModal('editProductModal')">X</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editProductId">
+      <div class="form-row">
+        <label class="form-label">NAME</label>
+        <input type="text" id="editProductName" class="form-input" disabled style="opacity:0.6">
+      </div>
+      <div class="form-row">
+        <label class="form-label">CATEGORY / SUBCATEGORY</label>
+        <input type="text" id="editProductCatSub" class="form-input" disabled style="opacity:0.6">
+      </div>
+      <div class="form-row">
+        <label class="form-label">BOTTLE PRICE ($)</label>
+        <input type="number" id="editProductBottlePrice" class="form-input" step="0.01" min="0" placeholder="Leave empty for MARKET">
+        <div style="font-size:10px;color:var(--ash);margin-top:2px">BTL SVC sell price. Empty = MARKET (owner/GM ring only)</div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">COST ($)</label>
+        <input type="number" id="editProductCost" class="form-input" step="0.01" min="0" placeholder="Distributor cost per bottle">
+      </div>
+      <div class="form-row">
+        <label class="form-label">PAR LEVEL</label>
+        <input type="number" id="editProductPar" class="form-input" step="0.5" min="0" placeholder="Reorder point (bottles)">
+      </div>
+      <div class="form-actions">
+        <button class="mgmt-action-btn" onclick="saveProduct()">SAVE</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
      SPIRIT UPGRADE MODAL (launched from modifier picker)
      ════════════════════════════════════════ -->
 <div id="spiritUpgradeModal" class="modal-overlay">
@@ -863,6 +941,7 @@
 <script src="js/management.js"></script>
 <script src="js/mgmt-menu.js"></script>
 <script src="js/mgmt-categories.js"></script>
+<script src="js/mgmt-products.js"></script>
 <script src="js/mgmt-staff.js"></script>
 <script src="js/mgmt-config.js"></script>
 <script src="js/mgmt-reports.js"></script>
