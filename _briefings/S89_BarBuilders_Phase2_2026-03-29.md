@@ -11,18 +11,18 @@
 - **Persistence:** `modifiers` jsonb column on `pos_order_lines` + `pos_order_lines_sync`
 - **Display:** Cart shows modifiers as italic text. Receipt HTML + ESC/POS thermal print show modifiers below line item.
 
-### Menu Items Populated (77 new items, 137 total)
+### Menu Items Populated (77 new items, 137 total → 115 after BTL SVC cleanup)
 - **15 Signature Drinks** (10 originals + 5 batched) — `SIGNATURE DRINKS` category
 - **15 Classic Cocktails** — `COCKTAILS` category
 - **4 Zero Proof** — `NON ALCOHOLIC` category
 - **10 Rare/Allocated** — new `RARE/ALLOCATED` category (#23) + dual-listed in spirit categories
-- **22 Btl Service** — `BTL SERVICE` category, grouped by subcategory
+- **~~22 Btl Service~~** — DELETED from pos_menu_items. BTL SVC now renders from inv_products.
 - **8 Fast Keys** marked `speed_rail = true`
 
-### Subcategory Grouping
+### Subcategory Tab View
 - `subcategory` column on `pos_menu_items`
-- BTL SERVICE items grouped under COGNAC / VODKA / TEQUILA / WHISKEY / RUM / GIN / CHAMPAGNE headers
-- Menu grid renders group headers when items have subcategories
+- Categories with 2+ subcategories render a horizontal tab strip (same as Stock Up)
+- Menu grid groups items under subcategory tabs when present
 
 ### Recipe Viewer
 - `recipe` jsonb column on `pos_menu_items` (specs, method, glassware, garnish, shelfLife)
@@ -30,17 +30,77 @@
 - Gold **i** button on menu items with recipes → tap opens recipe card modal
 - Batched drinks show shelf life
 
-## Migrations Run
-| File | What |
-|------|------|
-| 001_modifiers.sql | Modifier tables + RLS + seed data |
-| 002_menu_items_bar_builders.sql | 77 menu items + Rare/Allocated category + Fast Keys |
-| 003_menu_subcategory_recipes.sql | subcategory + recipe columns, BTL SVC grouping, 34 recipes |
-| 004_modifier_upcharges.sql | price column on modifiers, Spirit upgrade group (12 options) |
+### Stock Up (NEW)
+- Bartender taps STOCK UP → loads `inv_products` (bar-related categories)
+- Category tab strip → subcategory headers → products at $0.00 (REQ)
+- Tap product → `SU:` prefixed line at $0.00 on tab
+- FIRE → writes to `inv_stock_ups` (LR → bartender's station code)
+- No sales/tax/tip impact
 
-## Files Changed
+### BTL SVC Refactored (inv_products source)
+- BTL SVC and Stock Up now share the same `inv_products` data source
+- `bottle_price` column added to `inv_products` (nullable = MARKET)
+- MARKET items gated to owner/GM (role level 4+) — prompts for price at ring-up
+- Known bottle prices seeded for ~22 products
+- 22 duplicate BTL SVC rows deleted from `pos_menu_items`
+- **One SKU, one record** — foundational for inventory control
+
+### 2oz Pour Default
+- `inv_products.std_pour_oz` default changed from 1.25 to 2
+- All existing products updated
+
+## Migrations Run
+| # | File | What |
+|---|------|------|
+| 1 | 001_modifiers.sql | Modifier tables + RLS + seed data (4 groups, 19 options) |
+| 2 | 002_menu_items_bar_builders.sql | 77 menu items + Rare/Allocated category + Fast Keys |
+| 3 | 003_menu_subcategory_recipes.sql | subcategory + recipe columns, BTL SVC grouping, 34 recipes |
+| 4 | 004_modifier_upcharges.sql | price column on modifiers, Spirit upgrade group (12 options) |
+| 5 | 005_btl_svc_inv_products.sql | bottle_price on inv_products, 2oz pour, delete BTL SVC dupes |
+
+## Single-SKU Architecture (Established This Session)
+
+**One Grey Goose row in `inv_products`** → four ring-up paths:
+
+| Path | Staff action | Inventory impact | inv_product_id linked? |
+|---|---|---|---|
+| VODKA → Grey Goose | Pour (2oz) | Usage deduction | YES |
+| BTL SVC → Grey Goose | Bottle sale ($300) | Full bottle deduction | YES |
+| STOCK UP → Grey Goose | Request from LR | Transfer LR → bar | YES |
+| Cosmo + Spirit: Grey Goose | Upcharged pour (2oz) | Should deduct Grey Goose | **NOT YET** |
+
+## Next Session Priorities
+
+### P0 — inv_product_id Linking (Critical for Inventory Control)
+Spirit upgrade modifiers need `inv_product_id` so upgraded cocktails deduct from the correct SKU. Without this, a Cosmo upgraded to Grey Goose still deducts from house vodka inventory.
+
+**Build:**
+1. Add `inv_product_id` column to `pos_modifiers`
+2. When spirit modifier selected, swap the line's `inv_product_id` to the upgrade spirit
+3. Seed `inv_product_id` on existing 12 spirit upgrade modifiers
+4. Inventory deduction logic recognizes the swapped product
+
+### P1 — BOH Menu Management
+| Feature | Detail |
+|---------|--------|
+| Subcategory management | UI to set/edit subcategory on items |
+| Recipe management | UI to add/edit recipes |
+| Modifier management | CRUD for modifier groups + options + upcharges |
+| bottle_price management | Owner sets BTL SVC prices from management screen |
+
+### P2 — Rename INV to INV CTRL
+Owner wants inventory management section renamed to INV CTRL across portals to reflect its control function (usage tracking by bar/bartender → HOUSE totals).
+
+### P3 — Other
+- KDS (Phase 4) — kitchen/bar display
+- POS Close Day → P&L integration
+- Stripe Terminal (Phase 3)
+- LR printer for Stock Up request tickets (when remote printers configured)
+
+## Files Changed (Full Session)
 | File | Change |
 |------|--------|
+| CLAUDE.md | 8 new constraints (#27–#33), 3 new phases |
 | server/db/schema.sql | Modifier tables + modifiers column on order lines |
 | server/db/supabase-schema.sql | modifiers column on sync table |
 | server/routes/orders.js | Stores modifiers jsonb on line insert |
@@ -49,35 +109,17 @@
 | terminal/index.html | Recipe modal + modifier picker modal + script tags |
 | terminal/js/core.js | Loads modifier groups + subcategory + recipe at startup |
 | terminal/js/modifiers.js | NEW — modifier picker with upcharge support |
-| terminal/js/menu.js | Subcategory headers, recipe viewer, routes taps through modifier picker |
-| terminal/js/cart.js | Displays modifiers in cart lines |
+| terminal/js/stockup.js | NEW — Stock Up + BTL SVC from inv_products |
+| terminal/js/menu.js | Subcategory tabs, recipe viewer, Stock Up/BTL SVC routing |
+| terminal/js/cart.js | Displays modifiers in cart, stock-up write on fire |
 | terminal/js/receipt.js | Displays modifiers on receipt HTML |
 | terminal/js/server-link.js | Sends/reads modifiers on line persistence + hydration |
-| terminal/css/modifiers.css | NEW — modifier picker, subcategory headers, recipe card styles |
+| terminal/css/modifiers.css | NEW — modifier picker, subcategory headers, recipe card, stock up, BTL SVC styles |
 | terminal/css/menu.css | position:relative on .menu-item for recipe button |
 
-## Deferred: BOH Menu Management (Next Session)
-
-### Current State
-The management screen has basic CRUD for menu items and categories (`mgmt-menu.js`, `mgmt-categories.js`). It supports:
-- Add/edit/delete menu items (name, price, category, speed rail, sort order)
-- Add/edit categories (name, color, sort order)
-
-### What's Missing
-| Feature | Detail |
-|---------|--------|
-| **Subcategory management** | No UI to set/edit subcategory on items. Currently SQL-only. |
-| **Recipe management** | No UI to add/edit recipes. Currently SQL-only. |
-| **Multi-category items** | Items like Herradura should appear in both the spirit category (TEQUILA) and BTL SERVICE. Currently requires duplicate rows. Need a linking table or UI for dual-listing. |
-| **Modifier management** | No UI to add/edit/delete modifier groups or options. Currently SQL-only. |
-| **Modifier upcharge editing** | No UI to change spirit upgrade prices. Currently SQL-only. |
-
-### Recommended Build Order
-1. Add subcategory dropdown to item add/edit modal
-2. Add recipe editor (specs list, method, glassware, garnish fields)
-3. Add modifier group CRUD in management panel (new mgmt section)
-4. Add modifier option CRUD with price field
-5. Multi-category support — either a linking table or a "copy to category" action
-
-### Architecture Note
-Multi-category items (e.g., Herradura in TEQUILA + BTL SERVICE) currently work via duplicate rows with different `category_id`. This is simple and works for the terminal, but means price changes need to update multiple rows. A proper solution would be a `pos_menu_item_categories` junction table, but that's a bigger refactor. For now, the duplicate approach is fine for the ~10 items that need dual-listing.
+## Commits
+| Hash | Message |
+|------|---------|
+| 6e74579 | S89: Bar Builders Phase 2 — modifiers, menu population, recipes, stock up |
+| 48ac781 | BTL SERVICE uses subcategory tab strip layout (matches Stock Up pattern) |
+| 5a69a69 | BTL SVC from inv_products + bottle_price + 2oz pour default |

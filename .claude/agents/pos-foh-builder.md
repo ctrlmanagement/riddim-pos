@@ -7,7 +7,7 @@
 
 ### Stack
 - **Terminal UI:** Single-page HTML/CSS/JS served by local server (no framework, no build step)
-- **Files:** `terminal/index.html`, 20 JS modules in `terminal/js/`, 16 CSS partials in `terminal/css/`
+- **Files:** `terminal/index.html`, 23 JS modules in `terminal/js/` (incl modifiers.js, stockup.js), 17 CSS partials in `terminal/css/` (incl modifiers.css)
 - **Local Server:** Node.js + Express + Socket.IO on port 3000 (`server/index.js`)
 - **Local DB:** PostgreSQL 16 (`riddim_pos`) — orders, payments, audit, clock
 - **Cloud DB:** Supabase (`cbvryfgrqzdvbqigyrgh`) — menu, staff, security groups, config
@@ -19,7 +19,9 @@
 ```
 pos_config          — tax_rate, default_tip_pct, require_manager_void/comp/discount, max_discount_pct
 pos_menu_categories — id, name, sort_order, color (unused in terminal CSS), active. 22 categories matching HotSauce
-pos_menu_items      — id, name, price, category_id, speed_rail, sort_order, inv_product_id, active
+pos_menu_items      — id, name, price, category_id, speed_rail, sort_order, inv_product_id, subcategory, recipe (jsonb), active
+pos_modifier_groups — id, name, sort_order, active (5 groups: Ice, Mix, Garnish, Prep, Spirit)
+pos_modifiers       — id, group_id, name, sort_order, price (upcharge), active (31 options)
 pos_stations        — id, code, label, pos_name, active
 ```
 
@@ -30,7 +32,7 @@ pos_security_groups — id, name, description, is_default
 pos_security_permissions — id, group_id, permission, enabled (40 permissions per group)
 table_sessions      — table_number, guest_name, party_size, server_name, status, booking_id
 table_bookings      — table_number, guest_name, party_size, status
-inv_products        — id, name, pos_item_id (FK bridge to POS menu)
+inv_products        — id, name, category, subcategory, bottle_price, std_pour_oz (2), pos_item_id (FK bridge to POS menu)
 members             — id, first_name, last_name, phone, membership_tier, points_balance
 ```
 
