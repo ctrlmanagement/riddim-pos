@@ -72,13 +72,26 @@
 ## Next Session Priorities
 
 ### P0 — inv_product_id Linking (Critical for Inventory Control)
-Spirit upgrade modifiers need `inv_product_id` so upgraded cocktails deduct from the correct SKU. Without this, a Cosmo upgraded to Grey Goose still deducts from house vodka inventory.
+Every POS sale must trace back to its inv_products SKU. Three steps:
 
-**Build:**
-1. Add `inv_product_id` column to `pos_modifiers`
-2. When spirit modifier selected, swap the line's `inv_product_id` to the upgrade spirit
-3. Seed `inv_product_id` on existing 12 spirit upgrade modifiers
-4. Inventory deduction logic recognizes the swapped product
+**P0a — Link existing pos_menu_items to inv_products:**
+- Match pos_menu_items.name to inv_products.name by category
+- UPDATE query to set inv_product_id FK on all spirit pour items
+- Cocktails link to their base spirit inv_product_id
+
+**P0b — Add inv_product_id to pos_modifiers:**
+- New column on pos_modifiers table
+- Seed inv_product_id on existing 12 spirit upgrade modifiers
+- Match by name to inv_products
+
+**P0c — Terminal logic for spirit modifier swap:**
+- When spirit modifier selected, swap the line's inv_product_id to the upgrade spirit
+- Cosmo + Grey Goose → line.inv_product_id = Grey Goose (not house vodka)
+
+**P1 — Inventory deduction engine** (depends on P0 complete):
+- Fire/close → calculates usage per bar (pours × 2oz, bottles × 1 unit)
+- Writes to inventory usage totals
+- Connects POS sales to INV CTRL
 
 ### P1 — BOH Menu Management
 | Feature | Detail |
