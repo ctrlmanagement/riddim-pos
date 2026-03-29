@@ -430,41 +430,6 @@ async function renderMgmtDayClose() {
         <span>VOIDED TABS</span>
         <span>${voidedTabs.length}</span>
       </div>
-      <div class="dayclose-divider"></div>
-      <div class="dayclose-row">
-        <span>CARD SALES</span>
-        <span>$${cardSales.toFixed(2)}</span>
-      </div>
-      <div class="dayclose-row">
-        <span>CASH SALES</span>
-        <span>$${cashSales.toFixed(2)}</span>
-      </div>
-      <div class="dayclose-row">
-        <span>COMP</span>
-        <span>$${compSales.toFixed(2)}</span>
-      </div>
-      <div class="dayclose-divider"></div>
-      <div class="dayclose-row grand">
-        <span>TOTAL SALES</span>
-        <span>$${totalSales.toFixed(2)}</span>
-      </div>
-      <div class="dayclose-row">
-        <span>TOTAL TIPS</span>
-        <span>$${totalTips.toFixed(2)}</span>
-      </div>
-      <div class="dayclose-row grand">
-        <span>GRAND TOTAL</span>
-        <span>$${(totalSales + totalTips).toFixed(2)}</span>
-      </div>
-      <div class="dayclose-divider"></div>
-      <div class="dayclose-row" style="color:var(--red)">
-        <span>PAID OUTS</span>
-        <span>-$${paidOutsTotal.toFixed(2)}</span>
-      </div>
-      <div class="dayclose-row grand">
-        <span>NET CASH</span>
-        <span>$${netCash.toFixed(2)}</span>
-      </div>
     </div>
 
     <!-- Paid Outs List -->
@@ -500,15 +465,10 @@ async function renderMgmtDayClose() {
     <!-- Cash Deposit -->
     <div style="margin-top:20px;background:var(--obsidian-mid);border:1px solid var(--surface);border-radius:var(--radius-lg);padding:16px">
       <div style="font-family:var(--font-label);font-size:14px;color:var(--gold);letter-spacing:2px;margin-bottom:12px">CASH DEPOSIT</div>
-      <div class="dayclose-row">
-        <span>Expected (Net Cash)</span>
-        <span>$${netCash.toFixed(2)}</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+      <div style="display:flex;align-items:center;gap:12px">
         <label style="font-family:var(--font-label);font-size:12px;color:var(--ash);letter-spacing:1px;white-space:nowrap">COUNTED CASH $</label>
-        <input type="number" id="closeDayCashDeposit" step="0.01" min="0" placeholder="0.00" value="${netCash.toFixed(2)}"
-               style="width:140px;height:40px;padding:0 10px;border:1px solid var(--surface);border-radius:var(--radius);background:var(--obsidian);color:var(--ivory);font-size:18px;font-family:var(--font-body)" oninput="updateCashDifference()">
-        <span id="cashDiffDisplay" style="font-family:var(--font-label);font-size:13px;letter-spacing:1px"></span>
+        <input type="number" id="closeDayCashDeposit" step="0.01" min="0" placeholder="0.00"
+               style="width:140px;height:40px;padding:0 10px;border:1px solid var(--surface);border-radius:var(--radius);background:var(--obsidian);color:var(--ivory);font-size:18px;font-family:var(--font-body)">
       </div>
     </div>
 
