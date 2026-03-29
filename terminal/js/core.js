@@ -242,6 +242,25 @@ function showScreen(id) {
 }
 
 // ═══════════════════════════════════════════
+// AUDIO FEEDBACK (Web Audio API — no files needed)
+// ═══════════════════════════════════════════
+
+let _audioCtx = null;
+function posBeep(freq, duration, volume) {
+  try {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = _audioCtx.createOscillator();
+    const gain = _audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(_audioCtx.destination);
+    osc.frequency.value = freq || 800;
+    gain.gain.value = volume || 0.15;
+    osc.start();
+    osc.stop(_audioCtx.currentTime + (duration || 0.1));
+  } catch (e) { /* no audio support */ }
+}
+
+// ═══════════════════════════════════════════
 // TOAST NOTIFICATIONS
 // ═══════════════════════════════════════════
 
@@ -263,6 +282,8 @@ function showToast(msg, type) {
   toast.style.color = c.fg;
   toast.textContent = msg;
   toast.style.opacity = '1';
+  // Audio cue for errors
+  if (type === 'error' && typeof posBeep === 'function') posBeep(300, 0.15);
   setTimeout(() => { toast.style.opacity = '0'; }, 2500);
 }
 

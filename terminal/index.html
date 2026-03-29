@@ -92,7 +92,14 @@
       <!-- Menu Area: Category Sidebar + Item Grid -->
       <div class="menu-area">
         <div id="categoryBar" class="category-sidebar"></div>
-        <div id="menuGrid" class="menu-grid"></div>
+        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+          <div id="menuSearchBar" style="padding:6px 8px;background:var(--obsidian);border-bottom:1px solid var(--surface);display:flex;gap:8px;align-items:center">
+            <input type="text" id="menuSearchInput" placeholder="Search all items..." oninput="onMenuSearch(this.value)"
+              style="flex:1;height:32px;padding:0 10px;border:1px solid var(--surface);border-radius:var(--radius);background:var(--obsidian-mid);color:var(--ivory);font-size:13px;outline:none;">
+            <button onclick="clearMenuSearch()" style="background:none;border:none;color:var(--ash);font-size:18px;cursor:pointer;padding:0 4px">&times;</button>
+          </div>
+          <div id="menuGrid" class="menu-grid"></div>
+        </div>
       </div>
 
     </div>
@@ -247,6 +254,7 @@
   <!-- Management Panel (hidden by default, owner/manager only) -->
   <div id="managementPanel" class="mgmt-panel" style="display:none">
     <div class="mgmt-sidebar">
+      <button class="mgmt-nav-btn mgmt-back-btn" onclick="switchView('terminal')" style="color:var(--gold);border-bottom:1px solid var(--surface);margin-bottom:4px;padding-bottom:12px">&larr; BACK TO POS</button>
       <button class="mgmt-nav-btn active" data-mgmt="menu" onclick="switchMgmt('menu')">MENU ITEMS</button>
       <button class="mgmt-nav-btn" data-mgmt="categories" onclick="switchMgmt('categories')">CATEGORIES</button>
       <button class="mgmt-nav-btn" data-mgmt="staff" onclick="switchMgmt('staff')">STAFF / PINS</button>

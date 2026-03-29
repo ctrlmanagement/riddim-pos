@@ -80,6 +80,7 @@ async function attemptLogin() {
     currentUser = user;
     document.getElementById('loginError').textContent = '';
     if (typeof stopScreensaverTimer === 'function') stopScreensaverTimer();
+    startIdleTimer();
     enterTerminal();
   } else {
     failedAttempts++;
@@ -234,11 +235,45 @@ async function shutdownTerminal() {
 }
 
 function logout() {
+  stopIdleTimer();
   currentUser = null;
   showScreen('login');
   initLogin();
   if (typeof startScreensaverTimer === 'function') startScreensaverTimer();
 }
+
+// ═══════════════════════════════════════════
+// IDLE AUTO-LOGOUT (non-owner roles)
+// ═══════════════════════════════════════════
+
+const IDLE_TIMEOUT_MS = 90_000; // 90 seconds
+let _idleTimer = null;
+
+function startIdleTimer() {
+  stopIdleTimer();
+  if (!currentUser) return;
+  // Owner/GM don't auto-logout
+  if (getRoleLevel(currentUser) >= 4) return;
+  _idleTimer = setTimeout(() => {
+    if (currentUser && getRoleLevel(currentUser) < 4) {
+      showToast(currentUser.name + ' auto-logged out (idle)', 'warning');
+      logout();
+    }
+  }, IDLE_TIMEOUT_MS);
+}
+
+function stopIdleTimer() {
+  if (_idleTimer) { clearTimeout(_idleTimer); _idleTimer = null; }
+}
+
+function resetIdleTimer() {
+  if (currentUser) startIdleTimer();
+}
+
+// Reset on any touch/mouse/key activity
+['touchstart', 'mousedown', 'keydown'].forEach(evt => {
+  document.addEventListener(evt, resetIdleTimer, { passive: true });
+});
 
 // ═══════════════════════════════════════════
 // CLOCK

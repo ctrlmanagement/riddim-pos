@@ -1,6 +1,22 @@
 /* RIDDIM POS — Cart + Order Lines + Void */
 'use strict';
 
+let _undoTimer = null;
+function _showUndoToast(itemName, undoFn) {
+  clearTimeout(_undoTimer);
+  let toast = document.getElementById('undoToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'undoToast';
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--surface-active);color:var(--ivory);padding:10px 20px;border-radius:8px;font-family:var(--font-body);font-size:14px;z-index:9999;display:flex;align-items:center;gap:12px;opacity:0;transition:opacity 0.3s;';
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = `<span>${escHtml(itemName)} removed</span><button onclick="this.parentElement._undoFn()" style="background:var(--gold);color:var(--obsidian);border:none;border-radius:4px;padding:4px 12px;font-family:var(--font-label);font-size:13px;letter-spacing:1px;cursor:pointer">UNDO</button>`;
+  toast._undoFn = () => { undoFn(); toast.style.opacity = '0'; clearTimeout(_undoTimer); };
+  toast.style.opacity = '1';
+  _undoTimer = setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+}
+
 function escHtml(str) {
   if (!str) return '';
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -67,9 +83,15 @@ function removeLine(lineId) {
   if (!line) return;
 
   if (line.status === 'pending') {
-    tab.lines = tab.lines.filter(l => l.id !== lineId);
+    const removed = tab.lines.splice(tab.lines.indexOf(line), 1)[0];
     renderCart();
     renderTabs();
+    // Undo toast — 3 seconds to tap undo
+    _showUndoToast(removed.name, () => {
+      tab.lines.push(removed);
+      renderCart();
+      renderTabs();
+    });
   } else {
     // Already sent — needs void permission
     if (!hasPermission('order.void_line')) {
@@ -357,7 +379,8 @@ function fireOrder() {
   // Persist to local server
   if (typeof serverFireOrder === 'function') serverFireOrder(tab);
 
-  // Visual feedback
+  // Audio + visual feedback
+  if (typeof posBeep === 'function') posBeep(880, 0.08);
   const btn = document.getElementById('btnFire');
   btn.textContent = 'SENT';
   btn.style.background = '#1E8449';

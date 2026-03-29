@@ -21,8 +21,8 @@
 }
 
 .seat-btn {
-  width: 36px;
-  height: 28px;
+  width: 44px;
+  height: 36px;
   border-radius: var(--radius);
   background: transparent;
   border: 1px solid transparent;
@@ -110,8 +110,8 @@
 }
 
 .btl-guest-btn {
-  width: 32px;
-  height: 28px;
+  width: 44px;
+  height: 36px;
   border-radius: var(--radius);
   border: 1px solid var(--surface);
   background: var(--obsidian-mid);

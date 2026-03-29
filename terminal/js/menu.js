@@ -15,9 +15,26 @@ function renderCategories() {
   ).join('');
 }
 
+let _menuSearchTerm = '';
+
 function selectCategory(catId) {
   activeCategory = catId;
+  _menuSearchTerm = '';
+  const searchInput = document.getElementById('menuSearchInput');
+  if (searchInput) searchInput.value = '';
   renderCategories();
+  renderMenu();
+}
+
+function onMenuSearch(term) {
+  _menuSearchTerm = (term || '').toLowerCase().trim();
+  renderMenu();
+}
+
+function clearMenuSearch() {
+  _menuSearchTerm = '';
+  const searchInput = document.getElementById('menuSearchInput');
+  if (searchInput) searchInput.value = '';
   renderMenu();
 }
 
@@ -91,7 +108,13 @@ function qtyPickerConfirm() {
 
 function renderMenu() {
   const grid = document.getElementById('menuGrid');
-  const items = MENU_ITEMS.filter(i => i.cat === activeCategory);
+  let items;
+  if (_menuSearchTerm) {
+    // Search across ALL categories
+    items = MENU_ITEMS.filter(i => i.name.toLowerCase().includes(_menuSearchTerm));
+  } else {
+    items = MENU_ITEMS.filter(i => i.cat === activeCategory);
+  }
   grid.innerHTML = items.map(item => {
     const is86 = typeof isItem86 === 'function' && isItem86(item.id);
     return `<div class="menu-item ${item.speedRail ? 'speed-rail' : ''} ${is86 ? 'eighty-sixed' : ''}"
