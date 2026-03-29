@@ -84,11 +84,14 @@ router.post('/close', async (req, res) => {
     const totalPaidOuts = paidOuts.reduce((s, r) => s + parseFloat(r.total), 0);
 
     // ── 7. Save session locally ──
+    // closed_by is uuid — validate before inserting, pass null for non-UUID callers (e.g. BOH)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const closedByUuid = uuidRegex.test(closed_by) ? closed_by : null;
     const { rows: [session] } = await pool.query(
       `INSERT INTO pos_sessions (closed_at, closed_by, total_sales, total_tax, total_tips, total_comps, total_voids, order_count)
        VALUES (now(), $1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [
-        closed_by,
+        closedByUuid,
         parseFloat(sales.net_sales),
         parseFloat(sales.sales_tax),
         parseFloat(payments.total_tips),
@@ -139,7 +142,7 @@ router.post('/close', async (req, res) => {
         await pool.query(
           `INSERT INTO pos_audit_log (audit_type, staff_id, staff_name, detail)
            VALUES ('cash_deposit_override', $1, $2, $3)`,
-          [closed_by, closed_by_name || 'unknown',
+          [closedByUuid || '00000000-0000-0000-0000-000000000000', closed_by_name || 'unknown',
            JSON.stringify({ calculated: calculatedDeposit, entered: parseFloat(manualCashDeposit), over_short: overShort, date: businessDate })]
         );
       } catch (e) { console.warn('[day-close] audit log insert failed:', e.message); }
