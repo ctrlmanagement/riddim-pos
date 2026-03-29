@@ -1,5 +1,5 @@
 # RIDDIM POS — Claude Code Project Context
-**AG Entertainment | S88 | March 28, 2026**
+**AG Entertainment | S90 | March 29, 2026**
 
 ## What This Project Is
 Custom point-of-sale system for RIDDIM Supper Club (Atlanta, GA). Local-first architecture: on-premise server + Elo EloPOS 22" AIO terminals running Ubuntu 22.04 + Chromium kiosk. Integrates with the existing RIDDIM Supabase backend (51 tables — membership, inventory, P&L, events, bookings, ticketing).
@@ -42,7 +42,7 @@ Custom point-of-sale system for RIDDIM Supper Club (Atlanta, GA). Local-first ar
 |---|---|
 | Local Server | Node.js 20 + Express + Socket.IO (systemd service on TERM02) |
 | Local Database | PostgreSQL 16 |
-| Cloud Database | Supabase PostgreSQL (shared with RIDDIM platform) |
+| Cloud Database | Supabase PostgreSQL (shared with RIDDIM platform; pos_theoretical_usage table added S90) |
 | Sync | Application-level (Node.js daemon, HTTPS to Supabase, 30s cycle) |
 | Terminal App | Chromium kiosk on Ubuntu 22.04 (HTML/CSS/JS served by local server) |
 | Payment | Stripe Terminal SDK (Phase 3) |
@@ -101,7 +101,7 @@ const BAR_CONFIG = [
 ## Integration Points (existing RIDDIM tables)
 | System | Key Tables | POS Connection |
 |---|---|---|
-| Inventory | inv_products (has `pos_item_id`), inv_counts, inv_stock_ups | Sales → theoretical usage |
+| Inventory | inv_products (has `pos_item_id`), inv_counts, inv_stock_ups, pos_theoretical_usage | inv_product_id linked on 102 menu items + 12 modifiers. Theoretical usage written at day close (S90) |
 | P&L | daily_payouts (date+label key), pl_revenue | Auto-populate 11 DSR fields |
 | Members | members, points_ledger | Lookup at terminal, spend tracking, points |
 | Table Bookings | table_bookings, table_sessions | Tab linked to booking, min spend tracking |
@@ -142,6 +142,10 @@ const BAR_CONFIG = [
 31. **Stock Up is an inventory transfer, not a sale.** STOCK UP category renders `inv_products` (bar-related) at $0.00. Fire writes to `inv_stock_ups` (LR → bartender's station). Lines prefixed "SU:" are excluded from sales reporting. No revenue, tax, or tip impact. (S89)
 32. **BTL SVC renders from inv_products, not pos_menu_items.** Uses `bottle_price` column (nullable). NULL = MARKET (owner/GM only can ring). Same inv_products source as Stock Up. One SKU, one record. (S89)
 33. **Standard pour is 2oz.** `inv_products.std_pour_oz` default is 2. All existing products updated from 1.25 to 2. (S89)
+34. **inv_product_id is set on pos_menu_items at creation.** BOH menu management modal includes Inventory SKU dropdown. All new spirit pour items must have inv_product_id linked. 102 items linked in migration 006. (S90)
+35. **Spirit modifier swap priority.** When spirit upgrade modifier has inv_product_id, it overrides the menu item's default: spiritInvProductId > item.invProductId > null. This ensures inventory deducts the upgrade spirit, not the house. (S90)
+36. **Theoretical usage at day close only.** pos_theoretical_usage is written by POST /api/sessions/close, not at fire time. Comped items included (spirit consumed). Voided excluded. Stock-up lines (SU:) excluded. (S90)
+37. **Well spirits are canonical.** Well Vodka=Titos, Well Rum=Bacardi Superior, Well Gin=Tanqueray, Well Tequila=Jose Cuervo Tradicional Reposado, Well Whiskey=Four Roses Yellow Label. Cocktails using generic "bourbon/vodka/gin/rum/tequila" deduct from these. (S90)
 
 ## Research Briefs
 Located at `~/ctrl/riddimsupperclub/_briefings/pos-system/`:
@@ -186,3 +190,6 @@ Phase 9.6: Blind drop + Close Day fix — COMPLETE (S88) — UUID fix for BOH cl
 Phase 10: Bar Builders Phase 2 — COMPLETE (S89) — modifier system (5 groups, 31 options, upcharges), 77 new menu items, subcategory grouping, recipe viewer, RARE/ALLOCATED category
 Phase 10.1: Stock Up — COMPLETE (S89) — inventory request from terminal, loads inv_products, $0 lines, writes inv_stock_ups on fire
 Phase 10.2: BOH menu management — PENDING — subcategory/recipe/modifier CRUD in management screen, multi-category item support
+Phase 10.3: Inventory linking — COMPLETE (S90) — P0a/P0b/P0c inv_product_id on 102 menu items + 12 modifiers + terminal spirit swap
+Phase 10.4: Deduction engine — COMPLETE (S90) — pos_theoretical_usage table, day close aggregation, owner portal POS Variance view
+Phase 10.5: BOH menu management enhanced — COMPLETE (S90) — inv_product_id dropdown, subcategory field in add/edit modal
