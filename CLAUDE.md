@@ -126,7 +126,13 @@ const BAR_CONFIG = [
 15. **Category styling is CSS-only.** The `pos_menu_categories.color` DB column is not used for terminal rendering. Left column (categories) uses gold tint background; right column (items) uses dark background. Speed rail items get gold highlight background. Never read category colors from the database for terminal UI. (S85)
 16. **22 categories match HotSauce.** Beer, Vodka, Champ, Rum, Wine, Gin, Cocktails, Tequila, Signature Drinks, Whiskey, Stock Up, Cordials, VIP Table, Cognac, Non Alcoholic, Scotch, Hookah, Btl Service, Food, Retail, Mixers, Keyboard. Do not rename or merge categories without confirming HotSauce parity. (S85)
 17. **Role level derives from security group name.** `getRoleLevel()` checks `groupName` (from `pos_security_groups.name`) first, falls back to `pos_role`. Owner group = level 5 regardless of pos_role value. Never use pos_role alone for hierarchy. (S86)
-18. **Tab strip is role-filtered.** `getVisibleTabs()` used everywhere — tab strip, View Servers, Closed Checks. Staff only see own tabs unless `tab.view_all` is granted. Never show tabs from higher role level. (S86)
+18. **Tab strip is role-filtered.** `getVisibleTabs()` used everywhere — tab strip, View Servers, Closed Checks, Recall Tabs. Staff only see own tabs unless `tab.view_all` is granted. Never show tabs from higher role level. (S86/S87)
+20. **Server-side permission enforcement.** `server/middleware/auth.js` provides `requirePermission()` and `requireOwner()`. Applied to void, comp, price override, tip adjust, clear-all, paid-out delete. Looks up staff security group from DB with 60s cache. Falls through gracefully if lookup fails (local-first). (S87)
+21. **Void-after-payment blocked.** Server rejects void on orders with `state = 'paid'`. Must reopen first. (S87)
+22. **86 list is persisted.** `pos_86_items` table stores 86'd items. Loaded on terminal connect via `request-86-list` socket event. Survives server restart. (S87)
+23. **Qty picker via long-press.** Hold menu item 400ms to open qty modal. Single tap still adds 1. Quick-set buttons: 1, 2, 3, 5, 10. (S87)
+24. **PIN lockout.** 5 failed attempts → 60s lockout + audit log. Counter resets on successful login. (S87)
+25. **Venue name from CONFIG.** `CONFIG.venue_name`, `venue_subtitle`, `venue_city` used in receipt + printer. Loaded from `pos_config` table if present, defaults to RIDDIM/SUPPER CLUB/Atlanta, GA. (S87)
 19. **Cash deposit is manual entry.** Close Day accepts `cash_deposit` from terminal/BOH. Server uses manual amount for `daily_payouts` Cash Deposit row. Expected amount shown for reference only. (S86)
 
 ## Research Briefs
@@ -162,3 +168,9 @@ Phase 8.1: Role permissions — COMPLETE (S86) — role hierarchy (owner>gm>mana
 Phase 8.2: Staff management — COMPLETE (S86) — MANAGE STAFF panel, tip declaration on checkout, declared_tips column
 Phase 8.3: Close Day redesign — COMPLETE (S86) — cash deposit input, OVER/SHORT display, CC settle placeholder, BOH close day, clean error messages
 Phase 8.4: Terminal UI — COMPLETE (S86) — shutdown button, brighter refresh, owner portal POS links fixed
+Phase 9: Bug sweep — COMPLETE (S87) — 22 bug fixes, XSS hardening, transaction safety, float rounding, double-submit guards
+Phase 9.1: Server permissions — COMPLETE (S87) — middleware auth layer, void/comp/price/tip/clear-all gated, void-after-payment blocked
+Phase 9.2: Data persistence — COMPLETE (S87) — 86 list DB table, offline item queue (localStorage), deposit surplus audit, cash deposit override audit
+Phase 9.3: Design hardening — COMPLETE (S87) — WCAG contrast fixes, font size bumps, cart widened, tip reorder, color-coded toasts, floor plan enlarged, venue name configurable, search in mgmt panels
+Phase 9.4: Qty picker — COMPLETE (S87) — long-press menu item opens qty modal with quick-set buttons
+Phase 9.5: PIN lockout — COMPLETE (S87) — 5 attempts → 60s lockout + audit log
