@@ -159,7 +159,96 @@ router.post('/close', async (req, res) => {
       }
     });
 
-    // ── 9. Push to Supabase daily_payouts ──
+    // ── 9. Theoretical inventory usage ──
+    // Aggregate all fired lines by inv_product_id + station.
+    // Comped included (spirit was consumed). Voided excluded (not made).
+    // Stock-up lines excluded (handled by inv_stock_ups at fire time).
+    let usageResult = { products: 0, errors: [] };
+
+    if (supabaseAdmin) {
+      try {
+        // Query all order lines with inv_product_id for this day
+        const { rows: usageLines } = await pool.query(`
+          SELECT
+            l.inv_product_id,
+            o.station_code,
+            SUM(l.qty) as total_qty,
+            l.name
+          FROM pos_order_lines l
+          JOIN pos_orders o ON o.id = l.order_id
+          WHERE o.opened_at::date = $1
+            AND l.state != 'voided'
+            AND l.inv_product_id IS NOT NULL
+            AND l.name NOT LIKE 'SU:%'
+          GROUP BY l.inv_product_id, o.station_code, l.name
+        `, [businessDate]);
+
+        if (usageLines.length > 0) {
+          // Fetch std_pour_oz for all products referenced
+          const productIds = [...new Set(usageLines.map(l => l.inv_product_id))];
+          const { data: products } = await supabaseAdmin
+            .from('inv_products')
+            .select('id, std_pour_oz')
+            .in('id', productIds);
+
+          const pourMap = {};
+          (products || []).forEach(p => { pourMap[p.id] = parseFloat(p.std_pour_oz) || 2; });
+
+          // Aggregate by (product, station) — separate pours from bottles
+          const usageMap = {}; // key: `${inv_product_id}|${station_code}`
+          for (const line of usageLines) {
+            const key = `${line.inv_product_id}|${line.station_code || 'UNKNOWN'}`;
+            if (!usageMap[key]) {
+              usageMap[key] = {
+                inv_product_id: line.inv_product_id,
+                station_code: line.station_code || 'UNKNOWN',
+                pour_qty: 0,
+                pour_oz: 0,
+                bottle_qty: 0,
+                std_pour_oz: pourMap[line.inv_product_id] || 2,
+              };
+            }
+            const qty = parseInt(line.total_qty);
+            const isBottle = line.name && line.name.endsWith('(Btl)');
+            if (isBottle) {
+              usageMap[key].bottle_qty += qty;
+            } else {
+              usageMap[key].pour_qty += qty;
+              usageMap[key].pour_oz += qty * (pourMap[line.inv_product_id] || 2);
+            }
+          }
+
+          // UPSERT to Supabase
+          const usageRows = Object.values(usageMap).map(u => ({
+            business_date: businessDate,
+            inv_product_id: u.inv_product_id,
+            station_code: u.station_code,
+            pour_qty: u.pour_qty,
+            pour_oz: +u.pour_oz.toFixed(2),
+            bottle_qty: u.bottle_qty,
+            std_pour_oz: u.std_pour_oz,
+          }));
+
+          const { error: usageError } = await supabaseAdmin
+            .from('pos_theoretical_usage')
+            .upsert(usageRows, { onConflict: 'business_date,inv_product_id,station_code' });
+
+          if (usageError) {
+            usageResult.errors.push(usageError.message);
+            console.error('[day-close] theoretical usage upsert error:', usageError.message);
+          } else {
+            usageResult.products = usageRows.length;
+            console.log(`[day-close] pushed ${usageRows.length} theoretical usage rows for ${businessDate}`);
+          }
+        }
+      } catch (usageErr) {
+        usageResult.errors.push(usageErr.message);
+        console.error('[day-close] theoretical usage calc error:', usageErr.message);
+      }
+    }
+
+    // ── 10. Push to Supabase daily_payouts ──
+    // (renumbered from 9 — theoretical usage is now step 9)
     let syncResult = { pushed: 0, errors: [] };
 
     if (supabaseAdmin) {
@@ -185,7 +274,7 @@ router.post('/close', async (req, res) => {
       syncResult.errors.push('Supabase admin client not configured — P&L data saved locally only');
     }
 
-    // ── 10. Response ──
+    // ── 11. Response ──
     res.json({
       session,
       summary: {
@@ -207,6 +296,7 @@ router.post('/close', async (req, res) => {
       },
       daily_payouts: payoutRows,
       sync: syncResult,
+      theoretical_usage: usageResult,
     });
   } catch (err) {
     console.error('[day-close] error:', err);
