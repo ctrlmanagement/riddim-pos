@@ -37,7 +37,7 @@ function _invProductOptions(selectedId) {
 }
 
 // Spirit category options for base_spirit_category_id dropdown
-const SPIRIT_CATEGORY_NAMES = ['Vodka','Rum','Gin','Tequila','Whiskey','Cognac','Scotch'];
+const SPIRIT_CATEGORY_NAMES = ['VODKA','RUM','GIN','TEQUILA','WHISKEY','COGNAC','SCOTCH'];
 
 function _spiritCategoryOptions(selectedId) {
   const spiritCats = MENU_CATEGORIES.filter(c => SPIRIT_CATEGORY_NAMES.includes(c.name));
