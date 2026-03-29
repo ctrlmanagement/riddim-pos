@@ -633,7 +633,7 @@ function fastBar() {
 // ═══════════════════════════════════════════
 
 function openRecallTabs() {
-  const openTabs = tabs.filter(t => t.status === 'open' || t.status === 'sent');
+  const openTabs = getVisibleTabs(['open', 'sent']);
 
   const list = document.getElementById('recallTabsList');
   if (openTabs.length === 0) {
