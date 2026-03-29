@@ -1,14 +1,15 @@
-/* RIDDIM POS — Stock Up (Inventory Request from LR) */
+/* RIDDIM POS — Stock Up + BTL SVC (both render from inv_products) */
 'use strict';
 
 // ═══════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════
 
-const STOCKUP_CATEGORY_ID = 'ae496448-8c2f-4865-9176-13a53478cb27';
+const STOCKUP_CATEGORY_ID  = 'ae496448-8c2f-4865-9176-13a53478cb27';
+const BTLSVC_CATEGORY_ID   = 'e8c47563-ee54-4b82-b40a-4d18772e02ba';
 
-// Bar-related inventory categories to show in Stock Up
-const STOCKUP_INV_CATS = [
+// Bar-related inventory categories
+const INV_BAR_CATS = [
   'COGNAC', 'VODKA', 'WHISKEY', 'TEQUILA', 'RUM', 'GIN', 'SCOTCH',
   'CORDIAL', 'CHAMPAGNE', 'WINE', 'BEER', 'BEVERAGE',
 ];
@@ -17,50 +18,69 @@ const STOCKUP_INV_CATS = [
 // STATE
 // ═══════════════════════════════════════════
 
-let _stockUpProducts = [];      // loaded from inv_products
-let _stockUpLoaded = false;
-let _stockUpActiveCat = null;   // active inv category filter
+let _invProducts = [];          // loaded from inv_products
+let _invLoaded = false;
+let _invActiveCat = null;       // active inv category filter
+let _invMode = null;            // 'stockup' or 'btlsvc'
 
 // ═══════════════════════════════════════════
-// LOAD INVENTORY PRODUCTS (on first Stock Up tap)
+// LOAD INVENTORY PRODUCTS (shared, one load)
 // ═══════════════════════════════════════════
 
-async function _loadStockUpProducts() {
-  if (_stockUpLoaded) return;
+async function _loadInvProducts() {
+  if (_invLoaded) return;
 
   const { data, error } = await sb
     .from('inv_products')
-    .select('id, name, category, subcategory')
+    .select('id, name, category, subcategory, bottle_price')
     .eq('active', true)
-    .in('category', STOCKUP_INV_CATS)
+    .in('category', INV_BAR_CATS)
     .order('category')
     .order('subcategory')
     .order('name');
 
   if (error) {
-    console.error('Stock Up load error:', error);
+    console.error('Inventory load error:', error);
     showToast('Failed to load inventory', 'error');
     return;
   }
 
-  _stockUpProducts = data || [];
-  _stockUpLoaded = true;
+  _invProducts = data || [];
+  _invLoaded = true;
 }
 
 // ═══════════════════════════════════════════
-// DETECT & RENDER STOCK UP VIEW
+// DETECT CATEGORY TYPE
 // ═══════════════════════════════════════════
 
 function isStockUpCategory(catId) {
   return catId === STOCKUP_CATEGORY_ID;
 }
 
+function isBtlSvcCategory(catId) {
+  return catId === BTLSVC_CATEGORY_ID;
+}
+
+// ═══════════════════════════════════════════
+// RENDER — shared layout, different pricing
+// ═══════════════════════════════════════════
+
 async function renderStockUp() {
-  await _loadStockUpProducts();
+  _invMode = 'stockup';
+  await _renderInvView();
+}
+
+async function renderBtlSvc() {
+  _invMode = 'btlsvc';
+  await _renderInvView();
+}
+
+async function _renderInvView() {
+  await _loadInvProducts();
 
   const grid = document.getElementById('menuGrid');
 
-  if (!_stockUpProducts.length) {
+  if (!_invProducts.length) {
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--ash);padding:40px;font-size:16px;">No inventory products found</div>';
     return;
   }
@@ -68,28 +88,27 @@ async function renderStockUp() {
   // Get unique categories from loaded products
   const cats = [];
   const catSet = new Set();
-  STOCKUP_INV_CATS.forEach(c => {
-    if (_stockUpProducts.some(p => p.category === c)) {
+  INV_BAR_CATS.forEach(c => {
+    if (_invProducts.some(p => p.category === c)) {
       catSet.add(c);
       cats.push(c);
     }
   });
 
-  // Default to first category
-  if (!_stockUpActiveCat || !catSet.has(_stockUpActiveCat)) {
-    _stockUpActiveCat = cats[0];
+  if (!_invActiveCat || !catSet.has(_invActiveCat)) {
+    _invActiveCat = cats[0];
   }
 
   // Category tab strip
   const catTabs = cats.map(c =>
-    `<button class="su-cat-btn ${c === _stockUpActiveCat ? 'active' : ''}"
-            onclick="_stockUpSelectCat('${c}')">
+    `<button class="su-cat-btn ${c === _invActiveCat ? 'active' : ''}"
+            onclick="_invSelectCat('${c}')">
       ${c}
     </button>`
   ).join('');
 
   // Filter products for active category
-  const items = _stockUpProducts.filter(p => p.category === _stockUpActiveCat);
+  const items = _invProducts.filter(p => p.category === _invActiveCat);
 
   // Group by subcategory
   const hasSubcats = items.some(p => p.subcategory);
@@ -109,11 +128,11 @@ async function renderStockUp() {
 
     itemsHtml = groups.map(g => {
       const header = `<div class="menu-subcat-header">${g.label}</div>`;
-      const rows = g.items.map(p => _renderStockUpItem(p)).join('');
+      const rows = g.items.map(p => _renderInvItem(p)).join('');
       return header + rows;
     }).join('');
   } else {
-    itemsHtml = items.map(p => _renderStockUpItem(p)).join('');
+    itemsHtml = items.map(p => _renderInvItem(p)).join('');
   }
 
   grid.innerHTML =
@@ -121,22 +140,38 @@ async function renderStockUp() {
     itemsHtml;
 }
 
-function _renderStockUpItem(product) {
-  return `<div class="menu-item su-item"
-        onclick="_addStockUpToCart('${product.id}','${product.name.replace(/'/g, "\\'")}','${product.category}')"
+function _renderInvItem(product) {
+  const escapedName = product.name.replace(/'/g, "\\'");
+
+  if (_invMode === 'stockup') {
+    return `<div class="menu-item su-item"
+          onclick="_addStockUpToCart('${product.id}','${escapedName}','${product.category}')"
+          onmousedown="" onmouseup="" ontouchstart="" ontouchend="">
+      <span class="menu-item-name">${product.name}</span>
+      <span class="menu-item-price su-price">REQ</span>
+    </div>`;
+  }
+
+  // BTL SVC mode
+  const price = product.bottle_price;
+  const priceLabel = price ? '$' + parseFloat(price).toFixed(0) : 'MARKET';
+  const priceClass = price ? '' : 'su-price';
+
+  return `<div class="menu-item ${price ? '' : 'btl-market'}"
+        onclick="_addBtlSvcToCart('${product.id}','${escapedName}',${price || 0},'${product.category}')"
         onmousedown="" onmouseup="" ontouchstart="" ontouchend="">
     <span class="menu-item-name">${product.name}</span>
-    <span class="menu-item-price su-price">REQ</span>
+    <span class="menu-item-price ${priceClass}">${priceLabel}</span>
   </div>`;
 }
 
-function _stockUpSelectCat(cat) {
-  _stockUpActiveCat = cat;
-  renderStockUp();
+function _invSelectCat(cat) {
+  _invActiveCat = cat;
+  _renderInvView();
 }
 
 // ═══════════════════════════════════════════
-// ADD STOCK UP REQUEST TO CART
+// STOCK UP — $0.00 inventory transfer request
 // ═══════════════════════════════════════════
 
 async function _addStockUpToCart(productId, productName, category) {
@@ -162,13 +197,13 @@ async function _addStockUpToCart(productId, productName, category) {
     comped: false,
     modifiers: [],
     invProductId: productId,
-    stockUp: true,               // flag for stock-up lines
+    stockUp: true,
     stockUpCategory: category,
     addedAt: new Date(),
     addedBy: currentUser.id,
   };
 
-  // Check for existing pending stock-up of same product
+  // Merge qty if same product already pending
   const existing = tab.lines.find(l =>
     l.stockUp && l.invProductId === productId && l.status === 'pending' && !l.voided
   );
@@ -182,6 +217,62 @@ async function _addStockUpToCart(productId, productName, category) {
   renderCart();
   renderTabs();
   posBeep(600, 0.06);
+}
+
+// ═══════════════════════════════════════════
+// BTL SVC — bottle sale at bottle_price or MARKET
+// ═══════════════════════════════════════════
+
+async function _addBtlSvcToCart(productId, productName, price, category) {
+  // MARKET items (price = 0) — owner/GM only
+  if (!price || price <= 0) {
+    const userLevel = getRoleLevel(currentUser);
+    if (userLevel < 4) { // below GM
+      showToast('MARKET price — owner or GM must ring this item', 'error');
+      return;
+    }
+    // Prompt for price
+    const entered = prompt('Enter bottle price for ' + productName + ':');
+    if (!entered) return;
+    price = parseFloat(entered);
+    if (isNaN(price) || price <= 0) {
+      showToast('Invalid price', 'error');
+      return;
+    }
+  }
+
+  let tab = getActiveTab();
+  if (!tab) {
+    if (typeof pendingTableNum !== 'undefined' && pendingTableNum) {
+      tab = await materializePendingTable();
+    }
+    if (!tab) {
+      tab = await createTab();
+    }
+  }
+
+  const newLine = {
+    id: 'line-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    menuItemId: null,
+    name: productName + ' (Btl)',
+    price: price,
+    qty: 1,
+    seat: null,
+    status: 'pending',
+    voided: false,
+    comped: false,
+    modifiers: [],
+    invProductId: productId,
+    addedAt: new Date(),
+    addedBy: currentUser.id,
+  };
+
+  tab.lines.push(newLine);
+  if (typeof serverAddLines === 'function') serverAddLines(tab, [newLine]);
+
+  renderCart();
+  renderTabs();
+  posBeep(800, 0.08);
 }
 
 // ═══════════════════════════════════════════

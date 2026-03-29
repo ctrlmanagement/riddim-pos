@@ -140,6 +140,8 @@ const BAR_CONFIG = [
 29. **Subcategory headers in menu grid.** When items in a category have `subcategory` set, `renderMenu()` groups them with headers. Only applies to non-search views. (S89)
 30. **Recipe data is read-only on terminal.** `pos_menu_items.recipe` jsonb is displayed via the recipe viewer modal. Terminal never writes to it. Management CRUD is a future phase. (S89)
 31. **Stock Up is an inventory transfer, not a sale.** STOCK UP category renders `inv_products` (bar-related) at $0.00. Fire writes to `inv_stock_ups` (LR → bartender's station). Lines prefixed "SU:" are excluded from sales reporting. No revenue, tax, or tip impact. (S89)
+32. **BTL SVC renders from inv_products, not pos_menu_items.** Uses `bottle_price` column (nullable). NULL = MARKET (owner/GM only can ring). Same inv_products source as Stock Up. One SKU, one record. (S89)
+33. **Standard pour is 2oz.** `inv_products.std_pour_oz` default is 2. All existing products updated from 1.25 to 2. (S89)
 
 ## Research Briefs
 Located at `~/ctrl/riddimsupperclub/_briefings/pos-system/`:

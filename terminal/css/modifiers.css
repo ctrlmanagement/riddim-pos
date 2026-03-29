@@ -236,6 +236,15 @@
   letter-spacing: 1px;
 }
 
+.btl-market {
+  border-left: 3px solid rgba(231,76,60,0.3);
+  opacity: 0.7;
+}
+
+.btl-market:hover {
+  opacity: 1;
+}
+
 /* Cart modifier display */
 .cart-line-mods {
   padding-left: 28px;

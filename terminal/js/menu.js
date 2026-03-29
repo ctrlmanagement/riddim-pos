@@ -22,6 +22,7 @@ function selectCategory(catId) {
   activeCategory = catId;
   _menuSearchTerm = '';
   _subcatActiveTab = null;
+  if (typeof _invActiveCat !== 'undefined') _invActiveCat = null;
   const searchInput = document.getElementById('menuSearchInput');
   if (searchInput) searchInput.value = '';
   renderCategories();
@@ -121,9 +122,15 @@ function qtyPickerConfirm() {
 function renderMenu() {
   const grid = document.getElementById('menuGrid');
 
-  // Stock Up — special inventory request view
+  // Stock Up — inventory request view (from inv_products at $0)
   if (!_menuSearchTerm && typeof isStockUpCategory === 'function' && isStockUpCategory(activeCategory)) {
     renderStockUp();
+    return;
+  }
+
+  // BTL SVC — bottle sales view (from inv_products at bottle_price)
+  if (!_menuSearchTerm && typeof isBtlSvcCategory === 'function' && isBtlSvcCategory(activeCategory)) {
+    renderBtlSvc();
     return;
   }
 
