@@ -36,6 +36,19 @@ function _invProductOptions(selectedId) {
   return html;
 }
 
+// Spirit category options for base_spirit_category_id dropdown
+const SPIRIT_CATEGORY_NAMES = ['Vodka','Rum','Gin','Tequila','Whiskey','Cognac','Scotch'];
+
+function _spiritCategoryOptions(selectedId) {
+  const spiritCats = MENU_CATEGORIES.filter(c => SPIRIT_CATEGORY_NAMES.includes(c.name));
+  let html = '<option value="">— None (not a cocktail) —</option>';
+  spiritCats.forEach(c => {
+    const sel = c.id === selectedId ? 'selected' : '';
+    html += `<option value="${c.id}" ${sel}>${c.name}</option>`;
+  });
+  return html;
+}
+
 // ═══════════════════════════════════════════
 // MENU ITEMS MANAGEMENT
 // ═══════════════════════════════════════════
@@ -112,6 +125,9 @@ async function openAddItemModal() {
   // Populate inv_product dropdown
   document.getElementById('editItemInvProduct').innerHTML = _invProductOptions('');
 
+  // Populate base spirit category dropdown
+  document.getElementById('editItemBaseSpiritCat').innerHTML = _spiritCategoryOptions('');
+
   openModal('editItemModal');
 }
 
@@ -137,6 +153,9 @@ async function openEditItemModal(itemId) {
   // Populate inv_product dropdown with current selection
   document.getElementById('editItemInvProduct').innerHTML = _invProductOptions(item.invProductId || '');
 
+  // Populate base spirit category dropdown with current selection
+  document.getElementById('editItemBaseSpiritCat').innerHTML = _spiritCategoryOptions(item.baseSpiritCategoryId || '');
+
   openModal('editItemModal');
 }
 
@@ -149,6 +168,7 @@ async function saveMenuItem() {
   const sortOrder = parseInt(document.getElementById('editItemSort').value) || 0;
   const invProductId = document.getElementById('editItemInvProduct').value || null;
   const subcategory = document.getElementById('editItemSubcategory').value.trim() || null;
+  const baseSpiritCategoryId = document.getElementById('editItemBaseSpiritCat').value || null;
 
   if (!name || isNaN(price) || price < 0) {
     showToast('Name and valid price required');
@@ -163,6 +183,7 @@ async function saveMenuItem() {
     sort_order: sortOrder,
     inv_product_id: invProductId,
     subcategory: subcategory,
+    base_spirit_category_id: baseSpiritCategoryId,
     updated_at: new Date().toISOString(),
   };
 

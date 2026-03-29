@@ -514,6 +514,11 @@
         <input type="text" id="editItemSubcategory" class="form-input" placeholder="e.g. Bourbon, Blanco, Craft">
       </div>
       <div class="form-row">
+        <label class="form-label">BASE SPIRIT</label>
+        <select id="editItemBaseSpiritCat" class="form-input"><option value="">— None (not a cocktail) —</option></select>
+        <div style="font-size:10px;color:var(--ash);margin-top:2px">For cocktails: which spirit category to show for upgrades</div>
+      </div>
+      <div class="form-row">
         <label class="form-label">SORT ORDER</label>
         <input type="number" id="editItemSort" class="form-input" min="0" value="0">
       </div>
@@ -798,6 +803,24 @@
     <div style="display:flex;gap:12px;padding:12px 16px 16px;justify-content:flex-end">
       <button onclick="closeModifierPicker()" style="padding:12px 24px;background:var(--surface);color:var(--ivory);border:1px solid var(--ash);border-radius:6px;font-family:var(--font-label);font-size:15px;letter-spacing:1px;cursor:pointer">SKIP</button>
       <button onclick="confirmModifiers()" style="padding:12px 32px;background:var(--gold);color:var(--obsidian);border:none;border-radius:6px;font-family:var(--font-label);font-size:15px;letter-spacing:1px;cursor:pointer;font-weight:700">ADD</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SPIRIT UPGRADE MODAL (launched from modifier picker)
+     ════════════════════════════════════════ -->
+<div id="spiritUpgradeModal" class="modal-overlay">
+  <div class="modal" style="width:600px;max-width:95vw">
+    <div class="modal-header">
+      <div class="modal-title" id="spiritUpgradeHeader">SPIRIT UPGRADE</div>
+      <button class="modal-close" onclick="closeModal('spiritUpgradeModal')">X</button>
+    </div>
+    <div class="modal-body" id="spiritUpgradeBody" style="padding:12px">
+      <!-- Spirit options rendered by modifiers.js -->
+    </div>
+    <div style="display:flex;gap:12px;padding:12px 16px 16px;justify-content:flex-end">
+      <button onclick="clearSpiritUpgrade()" style="padding:12px 24px;background:var(--surface);color:var(--ivory);border:1px solid var(--ash);border-radius:6px;font-family:var(--font-label);font-size:15px;letter-spacing:1px;cursor:pointer">NO UPGRADE</button>
     </div>
   </div>
 </div>

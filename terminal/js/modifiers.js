@@ -1,4 +1,4 @@
-/* RIDDIM POS — Modifier Picker */
+/* RIDDIM POS — Modifier Picker + Dynamic Spirit Upgrade */
 'use strict';
 
 // ═══════════════════════════════════════════
@@ -8,6 +8,7 @@
 let _modPickerItemId = null;
 let _modPickerQty = 1;
 let _modSelections = {}; // { groupId: modifierId }
+let _spiritUpgradeSelection = null; // { id, name, price, upcharge, invProductId }
 
 // ═══════════════════════════════════════════
 // OPEN MODIFIER PICKER
@@ -26,13 +27,17 @@ function openModifierPicker(menuItemId, qty) {
   _modPickerItemId = menuItemId;
   _modPickerQty = qty || 1;
   _modSelections = {};
+  _spiritUpgradeSelection = null;
 
   // Header — show base price
   document.getElementById('modifierItemName').textContent = item.name + '  $' + item.price;
 
-  // Render groups
+  // Filter out the Spirit group — spirit upgrades handled by separate picker
+  const standardGroups = MODIFIER_GROUPS.filter(g => g.name.toLowerCase() !== 'spirit');
+
+  // Render standard groups (Ice, Mix, Garnish, Prep)
   const body = document.getElementById('modifierBody');
-  body.innerHTML = MODIFIER_GROUPS.map(g => {
+  body.innerHTML = standardGroups.map(g => {
     const btns = g.modifiers.map(m => {
       const priceTag = m.price > 0 ? `<span class="mod-price">+$${m.price}</span>` : '';
       return `<button class="mod-btn" data-group="${g.id}" data-mod="${m.id}" data-name="${m.name}" data-price="${m.price}"
@@ -46,6 +51,20 @@ function openModifierPicker(menuItemId, qty) {
     </div>`;
   }).join('');
 
+  // Spirit Upgrade button — only if the item has a base spirit category
+  if (item.baseSpiritCategoryId) {
+    body.innerHTML += `
+      <div class="mod-group">
+        <div class="mod-group-label">SPIRIT</div>
+        <div class="mod-group-options">
+          <button class="mod-btn mod-spirit-upgrade-btn" id="spiritUpgradeBtn" onclick="openSpiritUpgrade()">
+            UPGRADE SPIRIT
+          </button>
+        </div>
+        <div id="spiritUpgradeTag" class="spirit-upgrade-tag" style="display:none"></div>
+      </div>`;
+  }
+
   // Upcharge total display
   body.innerHTML += '<div id="modUpchargeTotal" class="mod-upcharge-total" style="display:none"></div>';
 
@@ -53,7 +72,7 @@ function openModifierPicker(menuItemId, qty) {
 }
 
 // ═══════════════════════════════════════════
-// TOGGLE SELECTION
+// TOGGLE SELECTION (standard groups)
 // ═══════════════════════════════════════════
 
 function toggleModifier(groupId, modId, el) {
@@ -76,22 +95,23 @@ function toggleModifier(groupId, modId, el) {
 }
 
 function _updateUpchargeTotal() {
-  const upcharge = _calcUpcharge();
+  const upcharge = _calcTotalUpcharge();
   const el = document.getElementById('modUpchargeTotal');
   if (!el) return;
 
   if (upcharge > 0) {
     const item = MENU_ITEMS.find(i => i.id === _modPickerItemId);
-    const base = item ? item.price : 0;
-    el.textContent = `$${base} + $${upcharge.toFixed(2)} = $${(base + upcharge).toFixed(2)}`;
+    const total = (item ? item.price : 0) + upcharge;
+    el.textContent = `$${total.toFixed(2)}`;
     el.style.display = '';
   } else {
     el.style.display = 'none';
   }
 }
 
-function _calcUpcharge() {
+function _calcTotalUpcharge() {
   let total = 0;
+  // Standard modifier upcharges
   MODIFIER_GROUPS.forEach(g => {
     const selId = _modSelections[g.id];
     if (selId) {
@@ -99,7 +119,134 @@ function _calcUpcharge() {
       if (mod && mod.price > 0) total += mod.price;
     }
   });
+  // Spirit upgrade upcharge
+  if (_spiritUpgradeSelection) {
+    total += _spiritUpgradeSelection.upcharge;
+  }
   return total;
+}
+
+// ═══════════════════════════════════════════
+// SPIRIT UPGRADE PICKER (second modal)
+// ═══════════════════════════════════════════
+
+function openSpiritUpgrade() {
+  const item = MENU_ITEMS.find(i => i.id === _modPickerItemId);
+  if (!item || !item.baseSpiritCategoryId) return;
+
+  // Get spirits from the matching category
+  const spirits = MENU_ITEMS.filter(i =>
+    i.cat === item.baseSpiritCategoryId && i.id !== item.id
+  ).sort((a, b) => a.sortOrder - b.sortOrder);
+
+  // Get category name for the header
+  const cat = MENU_CATEGORIES.find(c => c.id === item.baseSpiritCategoryId);
+  const catName = cat ? cat.name.toUpperCase() : 'SPIRITS';
+
+  const header = document.getElementById('spiritUpgradeHeader');
+  header.textContent = catName + ' UPGRADE';
+
+  const body = document.getElementById('spiritUpgradeBody');
+
+  if (!spirits.length) {
+    body.innerHTML = '<div style="color:var(--ash);padding:20px;text-align:center">No spirits in this category</div>';
+    openModal('spiritUpgradeModal');
+    return;
+  }
+
+  // Group by subcategory if present
+  const hasSubcats = spirits.some(s => s.subcategory);
+
+  if (hasSubcats) {
+    const groups = [];
+    const seen = new Set();
+    spirits.forEach(s => {
+      const sub = s.subcategory || 'OTHER';
+      if (!seen.has(sub)) {
+        seen.add(sub);
+        groups.push({ label: sub, items: [] });
+      }
+      groups.find(g => g.label === sub).items.push(s);
+    });
+
+    body.innerHTML = groups.map(g => {
+      const header = `<div class="spirit-subcat-header">${g.label}</div>`;
+      const btns = g.items.map(s => _renderSpiritBtn(s, item.price)).join('');
+      return header + `<div class="spirit-upgrade-options">${btns}</div>`;
+    }).join('');
+  } else {
+    body.innerHTML = `<div class="spirit-upgrade-options">
+      ${spirits.map(s => _renderSpiritBtn(s, item.price)).join('')}
+    </div>`;
+  }
+
+  openModal('spiritUpgradeModal');
+}
+
+function _renderSpiritBtn(spirit, cocktailPrice) {
+  const upcharge = Math.max(0, spirit.price - cocktailPrice + 2);
+  const totalPrice = cocktailPrice + upcharge;
+  const priceTag = `<span class="mod-price">$${totalPrice.toFixed(0)}</span>`;
+  const isSelected = _spiritUpgradeSelection && _spiritUpgradeSelection.id === spirit.id;
+  return `<button class="mod-btn spirit-btn ${isSelected ? 'active' : ''}"
+          data-spirit-id="${spirit.id}"
+          onclick="selectSpiritUpgrade('${spirit.id}')">
+    ${spirit.name}${priceTag}
+  </button>`;
+}
+
+function selectSpiritUpgrade(spiritId) {
+  const item = MENU_ITEMS.find(i => i.id === _modPickerItemId);
+  if (!item) return;
+
+  const spirit = MENU_ITEMS.find(i => i.id === spiritId);
+  if (!spirit) return;
+
+  // Toggle off if already selected
+  if (_spiritUpgradeSelection && _spiritUpgradeSelection.id === spiritId) {
+    _spiritUpgradeSelection = null;
+  } else {
+    const upcharge = Math.max(0, spirit.price - item.price + 2);
+    _spiritUpgradeSelection = {
+      id: spirit.id,
+      name: spirit.name,
+      price: spirit.price,
+      upcharge: upcharge,
+      invProductId: spirit.invProductId || null,
+    };
+  }
+
+  // Close spirit modal, update main picker
+  closeModal('spiritUpgradeModal');
+  _updateSpiritTag();
+  _updateUpchargeTotal();
+}
+
+function clearSpiritUpgrade() {
+  _spiritUpgradeSelection = null;
+  closeModal('spiritUpgradeModal');
+  _updateSpiritTag();
+  _updateUpchargeTotal();
+}
+
+function _updateSpiritTag() {
+  const tag = document.getElementById('spiritUpgradeTag');
+  const btn = document.getElementById('spiritUpgradeBtn');
+  if (!tag || !btn) return;
+
+  if (_spiritUpgradeSelection) {
+    const s = _spiritUpgradeSelection;
+    const item = MENU_ITEMS.find(i => i.id === _modPickerItemId);
+    const total = (item ? item.price : 0) + s.upcharge;
+    tag.textContent = s.name + ` $${total.toFixed(0)}`;
+    tag.style.display = '';
+    btn.classList.add('active');
+    btn.textContent = _spiritUpgradeSelection.name;
+  } else {
+    tag.style.display = 'none';
+    btn.classList.remove('active');
+    btn.textContent = 'UPGRADE SPIRIT';
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -112,18 +259,25 @@ function confirmModifiers() {
   let spiritInvProductId = null;
 
   // Collect selected modifier names + upcharge in group sort order
-  MODIFIER_GROUPS.forEach(g => {
+  const standardGroups = MODIFIER_GROUPS.filter(g => g.name.toLowerCase() !== 'spirit');
+  standardGroups.forEach(g => {
     const selId = _modSelections[g.id];
     if (selId) {
       const mod = g.modifiers.find(m => m.id === selId);
       if (mod) {
         modNames.push(mod.price > 0 ? `${mod.name} (+$${mod.price})` : mod.name);
         if (mod.price > 0) upcharge += mod.price;
-        // Spirit upgrade → swap inv_product_id to upgrade spirit
-        if (mod.invProductId) spiritInvProductId = mod.invProductId;
       }
     }
   });
+
+  // Spirit upgrade
+  if (_spiritUpgradeSelection) {
+    const s = _spiritUpgradeSelection;
+    modNames.push(s.upcharge > 0 ? `${s.name} (+$${s.upcharge})` : s.name);
+    upcharge += s.upcharge;
+    spiritInvProductId = s.invProductId;
+  }
 
   closeModal('modifierModal');
   _addToCartWithModifiers(_modPickerItemId, _modPickerQty, modNames, upcharge, spiritInvProductId);

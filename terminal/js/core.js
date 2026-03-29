@@ -114,7 +114,7 @@ async function loadCategories() {
 async function loadMenuItems() {
   const { data, error } = await sb
     .from('pos_menu_items')
-    .select('id, name, price, category_id, speed_rail, sort_order, inv_product_id, subcategory, recipe')
+    .select('id, name, price, category_id, speed_rail, sort_order, inv_product_id, subcategory, recipe, base_spirit_category_id')
     .eq('active', true)
     .order('sort_order');
   if (data) {
@@ -128,6 +128,7 @@ async function loadMenuItems() {
       invProductId: i.inv_product_id,
       subcategory: i.subcategory || null,
       recipe: i.recipe || null,
+      baseSpiritCategoryId: i.base_spirit_category_id || null,
     }));
   }
   if (error) console.error('Menu items load error:', error);
@@ -423,6 +424,12 @@ document.addEventListener('keydown', (e) => {
   // Member lookup modal — Escape to close
   if (document.getElementById('memberLookupModal') && document.getElementById('memberLookupModal').classList.contains('active')) {
     if (e.key === 'Escape') closeModal('memberLookupModal');
+    return;
+  }
+
+  // Spirit upgrade modal — Escape to close
+  if (document.getElementById('spiritUpgradeModal') && document.getElementById('spiritUpgradeModal').classList.contains('active')) {
+    if (e.key === 'Escape') closeModal('spiritUpgradeModal');
     return;
   }
 

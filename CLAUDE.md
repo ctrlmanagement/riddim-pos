@@ -146,6 +146,7 @@ const BAR_CONFIG = [
 35. **Spirit modifier swap priority.** When spirit upgrade modifier has inv_product_id, it overrides the menu item's default: spiritInvProductId > item.invProductId > null. This ensures inventory deducts the upgrade spirit, not the house. (S90)
 36. **Theoretical usage at day close only.** pos_theoretical_usage is written by POST /api/sessions/close, not at fire time. Comped items included (spirit consumed). Voided excluded. Stock-up lines (SU:) excluded. (S90)
 37. **Well spirits are canonical.** Well Vodka=Titos, Well Rum=Bacardi Superior, Well Gin=Tanqueray, Well Tequila=Jose Cuervo Tradicional Reposado, Well Whiskey=Four Roses Yellow Label. Cocktails using generic "bourbon/vodka/gin/rum/tequila" deduct from these. (S90)
+38. **Spirit upgrades are dynamic, not static modifiers.** The "Spirit" modifier group is deactivated. Spirit upgrades come from `pos_menu_items` filtered by the cocktail's `base_spirit_category_id`. Upcharge formula: `max(0, spirit_pour_price - cocktail_price + 2)`. A Manhattan ($16) upgraded to WhistlePig ($25) = $11 upcharge. Set via BOH Management > Edit Item > BASE SPIRIT dropdown. (S91)
 
 ## Research Briefs
 Located at `~/ctrl/riddimsupperclub/_briefings/pos-system/`:
