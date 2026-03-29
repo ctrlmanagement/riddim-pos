@@ -58,6 +58,9 @@ function showReceipt(tab) {
     const price = l.comped ? '  COMP' : '$' + (l.price * l.qty).toFixed(2);
     const seatTag = l.seat ? ' [S' + l.seat + ']' : '';
     html += `<div class="rcpt-row"><span>${l.qty}x ${l.name}${seatTag}</span><span>${price}</span></div>`;
+    if (l.modifiers && l.modifiers.length) {
+      html += `<div class="rcpt-row rcpt-sm" style="padding-left:20px;color:var(--ash)"><span>${l.modifiers.join(', ')}</span><span></span></div>`;
+    }
   });
 
   html += '<hr class="rcpt-divider">';

@@ -1,0 +1,247 @@
+/* RIDDIM POS — Modifier Picker */
+
+.mod-group {
+  margin-bottom: 12px;
+}
+
+.mod-group-label {
+  font-family: var(--font-label);
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: var(--ash);
+  margin-bottom: 6px;
+}
+
+.mod-group-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mod-btn {
+  padding: 10px 16px;
+  background: var(--surface);
+  color: var(--ivory);
+  border: 1px solid var(--surface-active);
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.mod-btn:active {
+  transform: scale(0.97);
+}
+
+.mod-btn.active {
+  background: var(--gold);
+  color: var(--obsidian);
+  border-color: var(--gold);
+  font-weight: 700;
+}
+
+.mod-price {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-left: 2px;
+}
+
+.mod-btn.active .mod-price {
+  opacity: 1;
+}
+
+.mod-upcharge-total {
+  font-family: var(--font-label);
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: var(--gold);
+  text-align: right;
+  padding: 8px 4px 0;
+  margin-top: 4px;
+  border-top: 1px solid var(--surface);
+}
+
+/* ═══════════════════════════════════════════
+   SUBCATEGORY HEADERS IN MENU GRID
+   ═══════════════════════════════════════════ */
+
+.menu-subcat-header {
+  grid-column: 1 / -1;
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  color: var(--gold);
+  padding: 8px 4px 4px;
+  border-bottom: 1px solid rgba(212,168,67,0.2);
+  margin-top: 4px;
+}
+
+/* ═══════════════════════════════════════════
+   RECIPE INFO BUTTON ON MENU ITEMS
+   ═══════════════════════════════════════════ */
+
+.menu-item-recipe {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(212,168,67,0.25);
+  color: var(--gold);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-style: italic;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.menu-item-recipe:active {
+  background: var(--gold);
+  color: var(--obsidian);
+}
+
+/* ═══════════════════════════════════════════
+   RECIPE MODAL CONTENT
+   ═══════════════════════════════════════════ */
+
+.recipe-name {
+  font-family: var(--font-label);
+  font-size: 22px;
+  letter-spacing: 1px;
+  color: var(--ivory);
+}
+
+.recipe-price {
+  font-family: var(--font-label);
+  font-size: 16px;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.recipe-section-label {
+  font-family: var(--font-label);
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: var(--ash);
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+
+.recipe-specs {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.recipe-specs li {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ivory);
+  padding: 2px 0;
+  padding-left: 12px;
+  position: relative;
+}
+
+.recipe-specs li::before {
+  content: '·';
+  position: absolute;
+  left: 0;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.recipe-text {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ivory);
+  line-height: 1.5;
+}
+
+.recipe-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.recipe-tag {
+  padding: 4px 10px;
+  background: var(--surface);
+  border: 1px solid var(--surface-active);
+  border-radius: 4px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ivory);
+}
+
+.recipe-shelf {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ash);
+  font-style: italic;
+  margin-top: 8px;
+}
+
+/* ═══════════════════════════════════════════
+   STOCK UP VIEW
+   ═══════════════════════════════════════════ */
+
+.su-cat-strip {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 4px;
+  padding: 0 0 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.su-cat-strip::-webkit-scrollbar { display: none; }
+
+.su-cat-btn {
+  padding: 8px 14px;
+  background: var(--surface);
+  color: var(--ivory-dim);
+  border: 1px solid var(--surface-active);
+  border-radius: 6px;
+  font-family: var(--font-label);
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.su-cat-btn.active {
+  background: rgba(212,168,67,0.15);
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.su-cat-btn:active { transform: scale(0.97); }
+
+.su-item {
+  border-left: 3px solid rgba(212,168,67,0.3);
+}
+
+.su-price {
+  color: var(--ash) !important;
+  font-size: 11px !important;
+  letter-spacing: 1px;
+}
+
+/* Cart modifier display */
+.cart-line-mods {
+  padding-left: 28px;
+  font-size: 11px;
+  color: var(--ash);
+  font-style: italic;
+  margin-top: -2px;
+  margin-bottom: 2px;
+}

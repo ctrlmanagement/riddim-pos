@@ -135,6 +135,11 @@ const BAR_CONFIG = [
 25. **Venue name from CONFIG.** `CONFIG.venue_name`, `venue_subtitle`, `venue_city` used in receipt + printer. Loaded from `pos_config` table if present, defaults to RIDDIM/SUPPER CLUB/Atlanta, GA. (S87)
 19. **Cash deposit is manual entry.** Close Day accepts `cash_deposit` from terminal/BOH. Server uses manual amount for `daily_payouts` Cash Deposit row. (S86)
 26. **Blind drop.** Close Day (FOH + BOH) does not show sales totals, expected cash, or pre-fill deposit amount. Staff count cash blind. OVER/SHORT calculated server-side after submission for audit log only. (S88)
+27. **Modifiers are denormalized on order lines.** `pos_order_lines.modifiers` is a jsonb array of modifier name strings (e.g. `["Neat","Don Julio 1942 (+$12)"]`). This keeps lines self-contained for offline/receipts. Do not normalize to a join table. (S89)
+28. **Spirit upgrade upcharges add to line price.** When a modifier has `price > 0`, the upcharge is added to `pos_order_lines.price` at cart time. The base menu item price is not modified. (S89)
+29. **Subcategory headers in menu grid.** When items in a category have `subcategory` set, `renderMenu()` groups them with headers. Only applies to non-search views. (S89)
+30. **Recipe data is read-only on terminal.** `pos_menu_items.recipe` jsonb is displayed via the recipe viewer modal. Terminal never writes to it. Management CRUD is a future phase. (S89)
+31. **Stock Up is an inventory transfer, not a sale.** STOCK UP category renders `inv_products` (bar-related) at $0.00. Fire writes to `inv_stock_ups` (LR → bartender's station). Lines prefixed "SU:" are excluded from sales reporting. No revenue, tax, or tip impact. (S89)
 
 ## Research Briefs
 Located at `~/ctrl/riddimsupperclub/_briefings/pos-system/`:
@@ -176,3 +181,6 @@ Phase 9.3: Design hardening — COMPLETE (S87) — WCAG contrast fixes, font siz
 Phase 9.4: Qty picker — COMPLETE (S87) — long-press menu item opens qty modal with quick-set buttons
 Phase 9.5: PIN lockout — COMPLETE (S87) — 5 attempts → 60s lockout + audit log
 Phase 9.6: Blind drop + Close Day fix — COMPLETE (S88) — UUID fix for BOH close, removed sales summary from FOH+BOH, blind cash deposit entry, post-close success state
+Phase 10: Bar Builders Phase 2 — COMPLETE (S89) — modifier system (5 groups, 31 options, upcharges), 77 new menu items, subcategory grouping, recipe viewer, RARE/ALLOCATED category
+Phase 10.1: Stock Up — COMPLETE (S89) — inventory request from terminal, loads inv_products, $0 lines, writes inv_stock_ups on fire
+Phase 10.2: BOH menu management — PENDING — subcategory/recipe/modifier CRUD in management screen, multi-category item support

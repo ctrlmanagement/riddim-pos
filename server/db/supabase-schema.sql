@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS pos_order_lines_sync (
     comped_by       uuid,
     comped_at       timestamptz,
     fired_at        timestamptz,
+    modifiers       jsonb DEFAULT '[]',
     added_by        uuid NOT NULL,
     added_at        timestamptz,
     created_at      timestamptz DEFAULT now()

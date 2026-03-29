@@ -64,7 +64,12 @@ function _menuTouchEnd(el) {
   if (el.dataset.is86) {
     showToast("Item is 86'd");
   } else {
-    addToCart(el.dataset.itemId);
+    // Route through modifier picker if modifiers are configured
+    if (typeof openModifierPicker === 'function' && MODIFIER_GROUPS.length) {
+      openModifierPicker(el.dataset.itemId, 1);
+    } else {
+      addToCart(el.dataset.itemId);
+    }
   }
 }
 
@@ -97,8 +102,13 @@ function qtyPickerConfirm() {
   const itemId = document.getElementById('qtyPickerItemId').value;
   const qty = parseInt(document.getElementById('qtyPickerValue').textContent) || 1;
   closeModal('qtyPickerModal');
-  for (let i = 0; i < qty; i++) {
-    addToCart(itemId);
+  // Route through modifier picker if modifiers are configured
+  if (typeof openModifierPicker === 'function' && MODIFIER_GROUPS.length) {
+    openModifierPicker(itemId, qty);
+  } else {
+    for (let i = 0; i < qty; i++) {
+      addToCart(itemId);
+    }
   }
 }
 
@@ -108,6 +118,13 @@ function qtyPickerConfirm() {
 
 function renderMenu() {
   const grid = document.getElementById('menuGrid');
+
+  // Stock Up — special inventory request view
+  if (!_menuSearchTerm && typeof isStockUpCategory === 'function' && isStockUpCategory(activeCategory)) {
+    renderStockUp();
+    return;
+  }
+
   let items;
   if (_menuSearchTerm) {
     // Search across ALL categories
@@ -115,14 +132,89 @@ function renderMenu() {
   } else {
     items = MENU_ITEMS.filter(i => i.cat === activeCategory);
   }
-  grid.innerHTML = items.map(item => {
-    const is86 = typeof isItem86 === 'function' && isItem86(item.id);
-    return `<div class="menu-item ${item.speedRail ? 'speed-rail' : ''} ${is86 ? 'eighty-sixed' : ''}"
-          data-item-id="${item.id}" data-is86="${is86 ? '1' : ''}"
-          ontouchstart="_menuTouchStart(this)" ontouchend="_menuTouchEnd(this)" ontouchcancel="_menuTouchCancel()"
-          onmousedown="_menuTouchStart(this)" onmouseup="_menuTouchEnd(this)" onmouseleave="_menuTouchCancel()">
-      <span class="menu-item-name">${item.name}</span>
-      <span class="menu-item-price">${is86 ? '86' : '$' + item.price}</span>
-    </div>`;
-  }).join('');
+
+  // Check if any items have subcategories — group them
+  const hasSubcats = !_menuSearchTerm && items.some(i => i.subcategory);
+
+  if (hasSubcats) {
+    // Group by subcategory, preserving sort order
+    const groups = [];
+    const seen = new Set();
+    items.forEach(item => {
+      const sub = item.subcategory || 'OTHER';
+      if (!seen.has(sub)) {
+        seen.add(sub);
+        groups.push({ label: sub, items: [] });
+      }
+      groups.find(g => g.label === sub).items.push(item);
+    });
+
+    grid.innerHTML = groups.map(g => {
+      const header = `<div class="menu-subcat-header">${g.label}</div>`;
+      const itemsHtml = g.items.map(item => _renderMenuItem(item)).join('');
+      return header + itemsHtml;
+    }).join('');
+  } else {
+    grid.innerHTML = items.map(item => _renderMenuItem(item)).join('');
+  }
+}
+
+function _renderMenuItem(item) {
+  const is86 = typeof isItem86 === 'function' && isItem86(item.id);
+  const recipeBtn = item.recipe
+    ? `<span class="menu-item-recipe" onclick="event.stopPropagation();openRecipe('${item.id}')" ontouchend="event.stopPropagation();" onmouseup="event.stopPropagation();">i</span>`
+    : '';
+  return `<div class="menu-item ${item.speedRail ? 'speed-rail' : ''} ${is86 ? 'eighty-sixed' : ''}"
+        data-item-id="${item.id}" data-is86="${is86 ? '1' : ''}"
+        ontouchstart="_menuTouchStart(this)" ontouchend="_menuTouchEnd(this)" ontouchcancel="_menuTouchCancel()"
+        onmousedown="_menuTouchStart(this)" onmouseup="_menuTouchEnd(this)" onmouseleave="_menuTouchCancel()">
+    ${recipeBtn}
+    <span class="menu-item-name">${item.name}</span>
+    <span class="menu-item-price">${is86 ? '86' : '$' + item.price}</span>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════
+// RECIPE VIEWER
+// ═══════════════════════════════════════════
+
+function openRecipe(menuItemId) {
+  const item = MENU_ITEMS.find(i => i.id === menuItemId);
+  if (!item || !item.recipe) return;
+
+  const r = item.recipe;
+  const body = document.getElementById('recipeBody');
+
+  let html = `<div class="recipe-name">${item.name}</div>`;
+  html += `<div class="recipe-price">$${item.price}</div>`;
+
+  // Specs
+  if (r.specs && r.specs.length) {
+    html += '<div class="recipe-section-label">BUILD</div>';
+    html += '<ul class="recipe-specs">';
+    r.specs.forEach(s => { html += `<li>${s}</li>`; });
+    html += '</ul>';
+  }
+
+  // Method
+  if (r.method) {
+    html += '<div class="recipe-section-label">METHOD</div>';
+    html += `<div class="recipe-text">${r.method}</div>`;
+  }
+
+  // Glassware + Garnish
+  if (r.glassware || r.garnish) {
+    html += '<div class="recipe-meta">';
+    if (r.glassware) html += `<span class="recipe-tag">${r.glassware}</span>`;
+    if (r.garnish) html += `<span class="recipe-tag">${r.garnish}</span>`;
+    html += '</div>';
+  }
+
+  // Shelf life (batched)
+  if (r.shelfLife) {
+    html += `<div class="recipe-shelf">Shelf life: ${r.shelfLife}</div>`;
+  }
+
+  body.innerHTML = html;
+  openModal('recipeModal');
 }

@@ -157,6 +157,9 @@ async function printReceipt(tab, config = {}) {
     const price = l.comped ? '  COMP' : '$' + (l.price * l.qty).toFixed(2);
     const seat = l.seat ? ` [S${l.seat}]` : '';
     await row(`${l.qty}x ${l.name}${seat}`, price);
+    if (l.modifiers && l.modifiers.length) {
+      await ln('   ' + l.modifiers.join(', '));
+    }
   }
   await separator();
 

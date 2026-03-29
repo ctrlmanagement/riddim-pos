@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS pos_order_lines (
     comped_by       uuid,
     comped_at       timestamptz,
     fired_at        timestamptz,
+    modifiers       jsonb DEFAULT '[]',          -- denormalized modifier names e.g. ["Neat","No Garnish"]
     added_by        uuid NOT NULL,
     added_at        timestamptz DEFAULT now(),
     created_at      timestamptz DEFAULT now()
@@ -156,6 +157,27 @@ CREATE TABLE IF NOT EXISTS pos_paid_outs (
 
 CREATE INDEX idx_paid_outs_session ON pos_paid_outs(session_id);
 CREATE INDEX idx_paid_outs_date ON pos_paid_outs(recorded_at);
+
+-- Modifier groups (ice, mix, garnish, prep)
+CREATE TABLE IF NOT EXISTS pos_modifier_groups (
+    id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    name            text NOT NULL,
+    sort_order      integer NOT NULL DEFAULT 0,
+    active          boolean DEFAULT true,
+    created_at      timestamptz DEFAULT now()
+);
+
+-- Modifier options within groups
+CREATE TABLE IF NOT EXISTS pos_modifiers (
+    id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    group_id        uuid NOT NULL REFERENCES pos_modifier_groups(id) ON DELETE CASCADE,
+    name            text NOT NULL,
+    sort_order      integer NOT NULL DEFAULT 0,
+    active          boolean DEFAULT true,
+    created_at      timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pos_modifiers_group ON pos_modifiers(group_id);
 
 -- KDS routing rules (which categories go to which display)
 CREATE TABLE IF NOT EXISTS pos_kds_routes (

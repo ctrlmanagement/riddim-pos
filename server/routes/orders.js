@@ -124,9 +124,9 @@ router.post('/:id/lines', async (req, res) => {
     const inserted = [];
     for (const line of lines) {
       const { rows } = await client.query(
-        `INSERT INTO pos_order_lines (order_id, menu_item_id, name, price, qty, seat, inv_product_id, added_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-        [id, line.menu_item_id, line.name, line.price, line.qty || 1, line.seat || null, line.inv_product_id || null, line.added_by]
+        `INSERT INTO pos_order_lines (order_id, menu_item_id, name, price, qty, seat, modifiers, inv_product_id, added_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+        [id, line.menu_item_id, line.name, line.price, line.qty || 1, line.seat || null, JSON.stringify(line.modifiers || []), line.inv_product_id || null, line.added_by]
       );
       inserted.push(rows[0]);
     }

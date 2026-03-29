@@ -340,6 +340,10 @@ function renderCartLine(l) {
   if (l.comped) classes.push('comped');
   if (l.status === 'sent' || l.status === 'preparing' || l.status === 'ready') classes.push('sent');
 
+  const modsHtml = l.modifiers && l.modifiers.length
+    ? `<div class="cart-line-mods">${l.modifiers.map(m => escHtml(m)).join(' / ')}</div>`
+    : '';
+
   return `<div class="${classes.join(' ')}" onclick="removeLine('${l.id}')">
     <span class="cart-line-qty">${l.qty}x</span>
     <span class="cart-line-name">
@@ -349,7 +353,7 @@ function renderCartLine(l) {
       ${l.comped ? '<span class="sent-badge" style="background:var(--orange)">COMP</span>' : ''}
     </span>
     <span class="cart-line-price">${l.voided || l.comped ? '—' : '$' + (l.price * l.qty).toFixed(2)}</span>
-  </div>`;
+  </div>${modsHtml}`;
 }
 
 // ═══════════════════════════════════════════
@@ -378,6 +382,9 @@ function fireOrder() {
 
   // Persist to local server
   if (typeof serverFireOrder === 'function') serverFireOrder(tab);
+
+  // Write stock-up requests to inv_stock_ups
+  if (typeof writeStockUps === 'function') writeStockUps(tab);
 
   // Audio + visual feedback
   if (typeof posBeep === 'function') posBeep(880, 0.08);

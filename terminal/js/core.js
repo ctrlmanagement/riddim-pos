@@ -33,6 +33,7 @@ let MENU_CATEGORIES = [];
 let MENU_ITEMS = [];
 let STATIONS = [];
 let SECURITY_GROUPS = []; // { id, name }
+let MODIFIER_GROUPS = []; // { id, name, sortOrder, modifiers: [{id, name, sortOrder}] }
 
 // ═══════════════════════════════════════════
 // DATA LOADING
@@ -113,7 +114,7 @@ async function loadCategories() {
 async function loadMenuItems() {
   const { data, error } = await sb
     .from('pos_menu_items')
-    .select('id, name, price, category_id, speed_rail, sort_order, inv_product_id')
+    .select('id, name, price, category_id, speed_rail, sort_order, inv_product_id, subcategory, recipe')
     .eq('active', true)
     .order('sort_order');
   if (data) {
@@ -125,6 +126,8 @@ async function loadMenuItems() {
       speedRail: i.speed_rail,
       sortOrder: i.sort_order,
       invProductId: i.inv_product_id,
+      subcategory: i.subcategory || null,
+      recipe: i.recipe || null,
     }));
   }
   if (error) console.error('Menu items load error:', error);
@@ -136,6 +139,29 @@ async function loadSecurityGroups() {
     .select('id, name');
   if (data) SECURITY_GROUPS = data;
   if (error) console.error('Security groups load error:', error);
+}
+
+async function loadModifiers() {
+  const [groupRes, modRes] = await Promise.all([
+    sb.from('pos_modifier_groups').select('id, name, sort_order').eq('active', true).order('sort_order'),
+    sb.from('pos_modifiers').select('id, group_id, name, sort_order, price').eq('active', true).order('sort_order'),
+  ]);
+  if (groupRes.error) { console.error('Modifier groups load error:', groupRes.error); return; }
+  if (modRes.error) { console.error('Modifiers load error:', modRes.error); return; }
+
+  const modsByGroup = {};
+  (modRes.data || []).forEach(m => {
+    (modsByGroup[m.group_id] = modsByGroup[m.group_id] || []).push({
+      id: m.id, name: m.name, sortOrder: m.sort_order, price: parseFloat(m.price) || 0,
+    });
+  });
+
+  MODIFIER_GROUPS = (groupRes.data || []).map(g => ({
+    id: g.id,
+    name: g.name,
+    sortOrder: g.sort_order,
+    modifiers: modsByGroup[g.id] || [],
+  }));
 }
 
 async function loadStations() {
@@ -166,6 +192,7 @@ async function loadAllData() {
     loadMenuItems(),
     loadStations(),
     loadSecurityGroups(),
+    loadModifiers(),
     typeof loadTableMinimums === 'function' ? loadTableMinimums() : Promise.resolve(),
   ]);
 
@@ -396,6 +423,12 @@ document.addEventListener('keydown', (e) => {
   // Member lookup modal — Escape to close
   if (document.getElementById('memberLookupModal') && document.getElementById('memberLookupModal').classList.contains('active')) {
     if (e.key === 'Escape') closeModal('memberLookupModal');
+    return;
+  }
+
+  // Recipe modal — Escape to close
+  if (document.getElementById('recipeModal') && document.getElementById('recipeModal').classList.contains('active')) {
+    if (e.key === 'Escape') closeModal('recipeModal');
     return;
   }
 

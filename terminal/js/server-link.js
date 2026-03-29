@@ -193,6 +193,7 @@ async function serverAddLines(tab, newLines) {
     price: l.price,
     qty: l.qty,
     seat: l.seat || null,
+    modifiers: l.modifiers || [],
     inv_product_id: l.invProductId || null,
     added_by: currentUser.id,
   }));
@@ -409,6 +410,7 @@ async function hydrateTabsFromServer() {
         price: parseFloat(l.price),
         qty: l.qty,
         seat: l.seat || null,
+        modifiers: l.modifiers || [],
         status: l.state || 'pending',
         voided: l.state === 'voided',
         comped: l.state === 'comped',

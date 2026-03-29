@@ -760,6 +760,40 @@
   </div>
 </div>
 
+<!-- ════════════════════════════════════════
+     RECIPE VIEWER MODAL
+     ════════════════════════════════════════ -->
+<div id="recipeModal" class="modal-overlay">
+  <div class="modal" style="width:480px;max-width:92vw">
+    <div class="modal-header">
+      <div class="modal-title">RECIPE</div>
+      <button class="modal-close" onclick="closeModal('recipeModal')">X</button>
+    </div>
+    <div class="modal-body" id="recipeBody" style="padding:16px">
+      <!-- Rendered by menu.js openRecipe() -->
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     MODIFIER PICKER MODAL
+     ════════════════════════════════════════ -->
+<div id="modifierModal" class="modal-overlay">
+  <div class="modal" style="width:600px;max-width:95vw">
+    <div class="modal-header">
+      <div class="modal-title" id="modifierItemName">MODIFIERS</div>
+      <button class="modal-close" onclick="closeModifierPicker()">X</button>
+    </div>
+    <div class="modal-body" id="modifierBody" style="padding:12px">
+      <!-- Modifier groups rendered by modifiers.js -->
+    </div>
+    <div style="display:flex;gap:12px;padding:12px 16px 16px;justify-content:flex-end">
+      <button onclick="closeModifierPicker()" style="padding:12px 24px;background:var(--surface);color:var(--ivory);border:1px solid var(--ash);border-radius:6px;font-family:var(--font-label);font-size:15px;letter-spacing:1px;cursor:pointer">SKIP</button>
+      <button onclick="confirmModifiers()" style="padding:12px 32px;background:var(--gold);color:var(--obsidian);border:none;border-radius:6px;font-family:var(--font-label);font-size:15px;letter-spacing:1px;cursor:pointer;font-weight:700">ADD</button>
+    </div>
+  </div>
+</div>
+
 <!-- Socket.IO client — try local server first, fall back to CDN -->
 <script src="/socket.io/socket.io.js" onerror="
   var s=document.createElement('script');
@@ -781,6 +815,8 @@
 <script src="js/receipt.js"></script>
 
 <!-- Feature modules -->
+<script src="js/modifiers.js"></script>
+<script src="js/stockup.js"></script>
 <script src="js/eightysix.js"></script>
 <script src="js/editcheck.js"></script>
 <script src="js/clock.js"></script>

@@ -112,6 +112,7 @@ async function syncOrderLines() {
       comped_by: r.comped_by,
       comped_at: r.comped_at,
       fired_at: r.fired_at,
+      modifiers: r.modifiers || [],
       added_by: r.added_by,
       added_at: r.added_at,
       created_at: r.created_at,
