@@ -30,7 +30,7 @@ function switchView(view) {
     if (typeof stopTableRefresh === 'function') stopTableRefresh();
     mgmtPanel.style.display = 'flex';
     navManagement.classList.add('active');
-    renderMgmtMenu();
+    mgmtLoadInvProducts().then(() => renderMgmtMenu());
   } else {
     if (typeof stopTableRefresh === 'function') stopTableRefresh();
     terminalBody.style.display = 'flex';
