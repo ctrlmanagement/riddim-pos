@@ -76,7 +76,7 @@ function showReceipt(tab) {
     html += `<div class="rcpt-row"><span>Service Charge (${(tab.autoGrat * 100).toFixed(0)}%)</span><span>$${grat.toFixed(2)}</span></div>`;
   }
   if (tip > 0 && !tab.autoGrat) {
-    html += `<div class="rcpt-row"><span>Tip</span><span>$${tip.toFixed(2)}</span></div>`;
+    html += `<div class="rcpt-row"><span>Service Charge</span><span>$${tip.toFixed(2)}</span></div>`;
   }
   // Deposit split payment
   const depositUsed = tab.depositUsed || 0;

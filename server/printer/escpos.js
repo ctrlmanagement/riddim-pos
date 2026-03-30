@@ -174,7 +174,7 @@ async function printReceipt(tab, config = {}) {
     await row(`Service Charge (${(tab.autoGrat * 100).toFixed(0)}%)`, '$' + grat.toFixed(2));
   }
   if (tip > 0 && !tab.autoGrat) {
-    await row('Tip', '$' + tip.toFixed(2));
+    await row('Service Charge', '$' + tip.toFixed(2));
   }
 
   // Deposit
