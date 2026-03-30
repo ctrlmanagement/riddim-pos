@@ -12,22 +12,36 @@ function renderMgmtServers() {
   const search = _serversSearchTerm.toLowerCase();
   const list = document.getElementById('mgmtServersList');
 
-  // Get staff below current user's auth level (strict — never equal or above)
-  // STAFF array only contains active staff (pre-filtered by query)
+  // Determine who is clocked in
+  const clockedInIds = new Set();
+  if (typeof clockEntries !== 'undefined') {
+    const latestByStaff = {};
+    clockEntries.forEach(e => {
+      if (!latestByStaff[e.staffId] || new Date(e.time) > new Date(latestByStaff[e.staffId].time)) {
+        latestByStaff[e.staffId] = e;
+      }
+    });
+    Object.entries(latestByStaff).forEach(([id, e]) => {
+      if (e.type === 'in') clockedInIds.add(id);
+    });
+  }
+
+  // Only show clocked-in staff below current user's auth level
   const visible = STAFF.filter(s => {
-    if (s.id === currentUser.id) return false; // don't show self
+    if (s.id === currentUser.id) return false;
+    if (!clockedInIds.has(s.id)) return false;
     const sLevel = getRoleLevel(s);
     if (sLevel >= myLevel) return false;
     if (search && !s.name.toLowerCase().includes(search)) return false;
     return true;
-  }).sort((a, b) => getRoleLevel(b) - getRoleLevel(a)); // highest first
+  }).sort((a, b) => getRoleLevel(b) - getRoleLevel(a));
 
   // Search bar
   let html = `<div style="margin-bottom:12px"><input type="text" placeholder="Search staff..." value="${_serversSearchTerm}"
     oninput="_serversSearchTerm=this.value;renderMgmtServers()" style="width:100%;height:36px;padding:0 10px;border:1px solid var(--surface);border-radius:var(--radius);background:var(--obsidian-mid);color:var(--ivory);font-size:13px;outline:none;"></div>`;
 
   if (visible.length === 0) {
-    list.innerHTML = html + '<div class="mgmt-empty">No staff below your clearance level</div>';
+    list.innerHTML = html + '<div class="mgmt-empty">No clocked-in staff below your clearance level</div>';
     return;
   }
 
