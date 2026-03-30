@@ -13,8 +13,9 @@ function renderMgmtServers() {
   const list = document.getElementById('mgmtServersList');
 
   // Get staff below current user's auth level (strict — never equal or above)
+  // STAFF array only contains active staff (pre-filtered by query)
   const visible = STAFF.filter(s => {
-    if (!s.active) return false;
+    if (s.id === currentUser.id) return false; // don't show self
     const sLevel = getRoleLevel(s);
     if (sLevel >= myLevel) return false;
     if (search && !s.name.toLowerCase().includes(search)) return false;
